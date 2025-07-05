@@ -1,0 +1,82 @@
+.home {
+  min-height: 100vh;
+  background: white;
+  padding-top: 90px; /* Espacio para el navbar fijo */
+  padding-bottom: 2rem;
+  width: 100%;
+}
+
+.home-content {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.home-header {
+  text-align: center;
+  margin-bottom: 3rem;
+  color: #333;
+  padding: 2rem 0;
+}
+
+.home-header h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: #169ccf;
+}
+
+.home-header p {
+  font-size: 1.2rem;
+  color: #666;
+  font-weight: 400;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .home {
+    padding-top: 70px;
+    padding-bottom: 1rem;
+  }
+  
+  .home-content {
+    padding: 0 1rem;
+  }
+  
+  .home-header {
+    padding: 1.5rem 0;
+    margin-bottom: 2rem;
+  }
+  
+  .home-header h1 {
+    font-size: 2rem;
+  }
+  
+  .home-header p {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .home {
+    padding-top: 65px;
+  }
+  
+  .home-content {
+    padding: 0 0.75rem;
+  }
+  
+  .home-header {
+    padding: 1rem 0;
+    margin-bottom: 1.5rem;
+  }
+  
+  .home-header h1 {
+    font-size: 1.6rem;
+  }
+  
+  .home-header p {
+    font-size: 0.9rem;
+  }
+} 
