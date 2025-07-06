@@ -86,11 +86,14 @@ async def process_text_message(
     db.commit()
     db.refresh(chat_entry)
     
+    # Validar que risk_level esté presente
+    if "risk_level" not in assessment:
+        raise HTTPException(status_code=500, detail="No se pudo determinar el nivel de riesgo")
     return AIResponse(
         output=response, 
         session_id=session_id,
         assessment=assessment,
-        risk_level=assessment.get("risk_level", "low")
+        risk_level=assessment["risk_level"]
     )
 
 @router.post("/process-voice", response_model=AIResponse)
@@ -135,11 +138,14 @@ async def process_voice_message(
         text=transcribed_text,
         assessment_type=assessment_type
     )
+    # Validar que risk_level esté presente
+    if "risk_level" not in assessment:
+        raise HTTPException(status_code=500, detail="No se pudo determinar el nivel de riesgo")
     return AIResponse(
         output=response, 
         session_id=session_id,
         assessment=assessment,
-        risk_level=assessment.get("risk_level", "low")
+        risk_level=assessment["risk_level"]
     )
 
 @router.get("/chat-history", response_model=List[ChatHistoryItem])
