@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import type { ChatMessage, Assessment } from '../types/ai';
 import { aiService } from '../services/ai.service';
 import './AiChat.css';
+import Modal from '../components/Modal';
 
 const AiChat: React.FC = () => {
   const [input, setInput] = useState('');
@@ -14,6 +15,7 @@ const AiChat: React.FC = () => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunks = useRef<Blob[]>([]);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
+  const [showClearModal, setShowClearModal] = useState(false);
 
   useEffect(() => {
     aiService.getChatHistoryWithAssessments().then(setHistory).catch(() => setHistory([]));
@@ -147,15 +149,18 @@ const AiChat: React.FC = () => {
 
   // Limpiar conversación
   const handleClearConversation = async () => {
-    if (window.confirm('¿Estás seguro de que quieres limpiar toda la conversación?')) {
-      try {
-        await aiService.clearConversation();
-        setHistory([]);
-        setSessionId(null);
-      } catch (err: unknown) {
-        if (err instanceof Error) setError(err.message);
-        else setError('Error al limpiar la conversación');
-      }
+    setShowClearModal(true);
+  };
+
+  const confirmClearConversation = async () => {
+    setShowClearModal(false);
+    try {
+      await aiService.clearConversation();
+      setHistory([]);
+      setSessionId(null);
+    } catch (err: unknown) {
+      if (err instanceof Error) setError(err.message);
+      else setError('Error al limpiar la conversación');
     }
   };
 
@@ -163,13 +168,15 @@ const AiChat: React.FC = () => {
     <div className="chat-container">
       <div className="chat-header">
         <h2 className="chat-title">Chat con Feel Guard IA</h2>
-        <button 
-          onClick={handleClearConversation} 
-          className="clear-btn"
-          title="Limpiar conversación"
-        >
-          🗑️ Limpiar
-        </button>
+        {history.length > 0 && (
+          <button 
+            onClick={handleClearConversation} 
+            className="clear-btn"
+            title="Limpiar conversación"
+          >
+            🗑️ Limpiar
+          </button>
+        )}
       </div>
       
       <div className="chat-history">
@@ -232,6 +239,17 @@ const AiChat: React.FC = () => {
       )}
       
       {error && <div className="chat-error">{error}</div>}
+
+      <Modal
+        open={showClearModal}
+        onClose={() => setShowClearModal(false)}
+        onConfirm={confirmClearConversation}
+        title="Limpiar conversación"
+        confirmText="Sí, limpiar"
+        cancelText="Cancelar"
+      >
+        ¿Estás seguro de que quieres limpiar toda la conversación?
+      </Modal>
     </div>
   );
 };
