@@ -158,6 +158,20 @@ const AiChat: React.FC = () => {
           </div>
         );
       }
+      if (assessment.crisis_indicators) {
+        const c = assessment.crisis_indicators;
+        return (
+          <div className="assessment-detail crisis-detail" style={{border:'2px solid #F44336', background:'#fff3f3', borderRadius:'8px', padding:'12px', marginTop:'8px'}}>
+            <h4 style={{color:'#F44336'}}>⚠️ Crisis detectada</h4>
+            <ul style={{marginBottom:'8px'}}>
+              {c.suicidal_ideation && <li><strong>Ideación suicida:</strong> Se detectaron frases relacionadas con pensamientos suicidas.</li>}
+              {c.self_harm && <li><strong>Autolesión:</strong> Se detectaron frases relacionadas con autolesiones.</li>}
+              {c.panic_attack && <li><strong>Ataque de pánico:</strong> Se detectaron síntomas de pánico o dificultad para respirar.</li>}
+            </ul>
+            <p style={{color:'#F44336', fontWeight:'bold'}}>Por favor, busca ayuda profesional o llama a los servicios de emergencia. Tu seguridad es lo más importante.</p>
+          </div>
+        );
+      }
       return null;
     };
     const typeLabel = typeTranslations[assessment.type] || assessment.type;
