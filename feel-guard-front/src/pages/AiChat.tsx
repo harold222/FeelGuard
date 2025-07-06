@@ -59,6 +59,21 @@ const AiChat: React.FC = () => {
     ocupacional: 'Satisfacción con trabajo o estudios',
   };
 
+  // Diccionarios de traducción
+  const typeTranslations: Record<string, string> = {
+    stress: 'Estrés',
+    anxiety: 'Ansiedad',
+    depression: 'Depresión',
+    wellness: 'Bienestar',
+    crisis: 'Crisis',
+  };
+  const riskLevelTranslations: Record<string, string> = {
+    low: 'Bajo',
+    moderate: 'Moderado',
+    high: 'Alto',
+    critical: 'Crítico',
+  };
+
   // Panel desplegable de detalles por mensaje
   const toggleDetails = (id: number) => {
     setExpandedDetails(prev => ({ ...prev, [id]: !prev[id] }));
@@ -145,17 +160,19 @@ const AiChat: React.FC = () => {
       }
       return null;
     };
+    const typeLabel = typeTranslations[assessment.type] || assessment.type;
+    const riskLabel = riskLevelTranslations[assessment.risk_level] || assessment.risk_level;
     return (
       <div className="assessment-card" style={{ borderLeft: `4px solid ${riskColor}` }}>
         <div className="assessment-header">
-          <span className="assessment-type">{assessment.type.toUpperCase()}</span>
+          <span className="assessment-type">{typeLabel.toUpperCase()}</span>
           <span className="risk-level" style={{ backgroundColor: riskColor }}>
-            {assessment.risk_level.toUpperCase()}
+            {riskLabel.toUpperCase()}
           </span>
         </div>
         <div className="assessment-details">
-          <p><strong>Evaluación:</strong> {assessment.type}</p>
-          <p><strong>Nivel de riesgo:</strong> {assessment.risk_level}</p>
+          <p><strong>Evaluación:</strong> {typeLabel}</p>
+          <p><strong>Nivel de riesgo:</strong> {riskLabel}</p>
           <p><strong>Fecha:</strong> {new Date(assessment.timestamp).toLocaleString()}</p>
         </div>
         {typeof msgId === 'number' && (
@@ -328,6 +345,14 @@ const AiChat: React.FC = () => {
             )}
           </div>
         ))}
+        {/* Indicador de que la IA está escribiendo */}
+        {loading && (
+          <div className="chat-bubble-group">
+            <div className="chat-bubble gpt">
+              <span className="typing-indicator">La IA está escribiendo<span className="dot">.</span><span className="dot">.</span><span className="dot">.</span></span>
+            </div>
+          </div>
+        )}
         <div ref={chatEndRef} />
       </div>
       
