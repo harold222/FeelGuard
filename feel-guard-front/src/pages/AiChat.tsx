@@ -39,9 +39,9 @@ const AiChat: React.FC = () => {
   // Función para mostrar la evaluación
   const renderAssessment = (assessment?: Assessment) => {
     if (!assessment) return null;
-
+    // Ocultar si type o risk_level es vacío
+    if (!assessment.type || !assessment.risk_level) return null;
     const riskColor = getRiskLevelColor(assessment.risk_level);
-    
     return (
       <div className="assessment-card" style={{ borderLeft: `4px solid ${riskColor}` }}>
         <div className="assessment-header">

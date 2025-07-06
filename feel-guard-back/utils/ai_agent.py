@@ -82,14 +82,17 @@ class AIAgent:
         if any(word in text_lower for word in ["ansiedad", "ansioso", "ansiosa", "preocupado", "preocupada", "pánico"]):
             return AssessmentType.ANXIETY
         
-        if any(word in text_lower for word in ["depresión", "deprimido", "deprimida", "triste", "sin esperanza", "vacío", "problema"]):
+        if any(word in text_lower for word in [
+            "depresión", "deprimido", "deprimida", "triste", "sin esperanza", "vacío", "problema",
+            "abrumado", "abrumada", "no encuentro salida", "no tengo ganas", "no tengo fuerzas", "no puedo más", "no puedo mas", "me siento vacío", "me siento vacio", "me siento solo", "me siento sola", "me siento sin esperanza", "me siento sin salida", "me siento destruido", "me siento destruida", "me siento fatal", "me siento sin valor", "me siento sin sentido", "me siento sin futuro", "me siento sin ganas de vivir"
+        ]):
             return AssessmentType.DEPRESSION
         
         if any(word in text_lower for word in ["bienestar", "salud", "ejercicio", "sueño", "alimentación"]):
             return AssessmentType.WELLNESS
         
-        # Por defecto, evaluar como estrés (más común)
-        return AssessmentType.STRESS
+        # Por defecto, si no coincide con ningún patrón, retornar None
+        return None
     
     def get_appropriate_prompt(self, text: str, conversation_history: List[str]) -> str:
         """Determina el prompt más apropiado basado en el contenido del mensaje"""

@@ -237,18 +237,19 @@ async def get_user_assessment_summary(
                 assessment_type
             )
             assessments.append(assessment)
-            risk_levels.append(assessment.get("risk_level", "low"))
-            assessment_types.append(assessment.get("type", "stress"))
+            risk_levels.append(assessment.get("risk_level", ""))
+            assessment_types.append(assessment.get("type", ""))
         
+        # Filtrar vacíos
+        filtered_risk_levels = [level for level in risk_levels if level]
+        filtered_assessment_types = [atype for atype in assessment_types if atype]
         # Calcular estadísticas
         risk_levels_summary = {}
-        for level in risk_levels:
+        for level in filtered_risk_levels:
             risk_levels_summary[level] = risk_levels_summary.get(level, 0) + 1
-        
         assessment_types_summary = {}
-        for assessment_type in assessment_types:
+        for assessment_type in filtered_assessment_types:
             assessment_types_summary[assessment_type] = assessment_types_summary.get(assessment_type, 0) + 1
-        
         # Calcular puntuación promedio de riesgo
         risk_scores = {
             "low": 1,
@@ -256,9 +257,8 @@ async def get_user_assessment_summary(
             "high": 3,
             "critical": 4
         }
-        total_risk_score = sum(risk_scores.get(level, 1) for level in risk_levels)
-        average_risk_score = total_risk_score / len(risk_levels) if risk_levels else 0
-        
+        total_risk_score = sum(risk_scores.get(level, 0) for level in filtered_risk_levels)
+        average_risk_score = total_risk_score / len(filtered_risk_levels) if filtered_risk_levels else 0
         # Determinar preocupación más común
         most_common_concern = max(assessment_types_summary.items(), key=lambda x: x[1])[0] if assessment_types_summary else "Sin datos"
         

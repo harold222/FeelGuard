@@ -41,26 +41,32 @@ class MentalHealthAssessment:
     def assess_risk_level(self, text: str) -> RiskLevel:
         """Evalúa el nivel de riesgo basado en el contenido del texto"""
         text_lower = text.lower()
+        # Mejorar: contar matches de frases completas, no solo palabras sueltas
+        def count_matches(phrases, text):
+            count = 0
+            for phrase in phrases:
+                if phrase in text:
+                    count += 1
+            return count
         
         # Verificar nivel crítico primero
-        if any(keyword in text_lower for keyword in self.risk_keywords[RiskLevel.CRITICAL]):
+        if any(phrase in text_lower for phrase in self.risk_keywords[RiskLevel.CRITICAL]):
             return RiskLevel.CRITICAL
         
-        # Contar palabras de cada nivel
+        # Contar palabras/frases de cada nivel
         risk_counts = {}
         for level, keywords in self.risk_keywords.items():
-            count = sum(1 for keyword in keywords if keyword in text_lower)
-            risk_counts[level] = count
-        
+            risk_counts[level] = count_matches(keywords, text_lower)
+
         # Determinar nivel basado en conteos
-        if risk_counts[RiskLevel.HIGH] >= 2:
+        if risk_counts[RiskLevel.HIGH] >= 1:
             return RiskLevel.HIGH
-        elif risk_counts[RiskLevel.MODERATE] >= 2:
+        elif risk_counts[RiskLevel.MODERATE] >= 1:
             return RiskLevel.MODERATE
         elif risk_counts[RiskLevel.LOW] >= 1:
             return RiskLevel.LOW
-        
-        return RiskLevel.LOW
+        # Si no hay ningún match, retornar cadena vacía
+        return ""
     
     def assess_stress_level(self, text: str) -> Dict:
         """Evalúa específicamente el nivel de estrés"""
@@ -228,11 +234,13 @@ class MentalHealthAssessment:
     def create_assessment(self, session_id: str, text: str, assessment_type: AssessmentType) -> Dict:
         """Crea una evaluación completa"""
         risk_level = self.assess_risk_level(text)
-        
+        # Si assessment_type es None, poner cadena vacía
+        type_value = assessment_type.value if assessment_type else ""
+        risk_level_value = risk_level.value if hasattr(risk_level, 'value') else (risk_level if risk_level else "")
         assessment = {
             "session_id": session_id,
-            "type": assessment_type.value,
-            "risk_level": risk_level.value,
+            "type": type_value,
+            "risk_level": risk_level_value,
             "timestamp": datetime.now().isoformat(),
             "text_sample": text[:200] + "..." if len(text) > 200 else text
         }
