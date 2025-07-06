@@ -75,7 +75,8 @@ class MentalHealthAssessment:
                 "dolor de cabeza", "tensión", "fatiga", "insomnio", "dolor muscular", "palpitaciones", "sudoración", "temblores", "mareos", "náuseas", "presión en el pecho", "taquicardia", "cansancio", "agotamiento", "malestar físico", "problemas digestivos", "sudor frío"
             ],
             "emocionales": [
-                "irritabilidad", "ansiedad", "frustración", "impaciencia", "enojo", "rabia", "tristeza", "llanto fácil", "sentirse abrumado", "desesperanza", "desánimo", "desmotivación"
+                "irritabilidad", "ansiedad", "frustración", "impaciencia", "enojo", "rabia", "tristeza", "llanto fácil", "sentirse abrumado", "desesperanza", "desánimo", "desmotivación",
+                "preocupación económica", "preocupación por el dinero", "preocupación por el trabajo", "preocupación por el futuro", "preocupación por la familia", "preocupación por la salud", "preocupación por la situación", "preocupación por la pobreza"
             ],
             "cognitivos": [
                 "dificultad para concentrarse", "olvidos", "confusión", "pensamientos acelerados", "preocupación constante", "bloqueo mental", "dificultad para tomar decisiones", "rumiación"
@@ -112,7 +113,8 @@ class MentalHealthAssessment:
         """Evalúa específicamente el nivel de ansiedad"""
         anxiety_indicators = {
             "preocupación": [
-                "preocupado", "preocupada", "preocupación", "miedo", "temor", "nervioso", "nerviosa", "inquietud", "inseguridad", "pánico", "sentirse en peligro", "anticipación negativa", "temor al futuro"
+                "preocupado", "preocupada", "preocupación", "miedo", "temor", "nervioso", "nerviosa", "inquietud", "inseguridad", "pánico", "sentirse en peligro", "anticipación negativa", "temor al futuro",
+                "preocupación económica", "preocupación por el dinero", "preocupación por el trabajo", "preocupación por el futuro", "preocupación por la familia", "preocupación por la salud", "preocupación por la situación", "preocupación por la pobreza"
             ],
             "físicos": [
                 "palpitaciones", "sudoración", "temblores", "mareos", "náuseas", "opresión en el pecho", "dificultad para respirar", "boca seca", "hormigueo", "tensión muscular", "dolor de estómago", "taquicardia"
@@ -152,7 +154,8 @@ class MentalHealthAssessment:
         """Evalúa específicamente el nivel de depresión"""
         depression_indicators = {
             "estado_animo": [
-                "triste", "vacío", "sin esperanza", "desesperado", "abatido", "desanimado", "llanto frecuente", "sentirse inútil", "culpa", "vergüenza", "apatía", "indiferencia"
+                "triste", "vacío", "sin esperanza", "desesperado", "abatido", "desanimado", "llanto frecuente", "sentirse inútil", "culpa", "vergüenza", "apatía", "indiferencia",
+                "nunca podré", "no puedo lograr", "no tengo futuro", "no tengo posibilidades", "por mi pobreza", "por mi situación", "no merezco", "no valgo", "no soy suficiente", "no tengo oportunidad", "no tengo suerte", "no tengo recursos", "no tengo salida", "no tengo opción", "no tengo alternativa", "no tengo motivación", "no tengo ilusión", "no tengo sueños", "no tengo metas", "no tengo propósito"
             ],
             "interés": [
                 "pérdida de interés", "sin motivación", "apatía", "nada me interesa", "no disfruto nada", "falta de placer", "anhedonia"
@@ -164,7 +167,8 @@ class MentalHealthAssessment:
                 "pérdida de apetito", "comer en exceso", "cambios de peso", "falta de hambre", "aumento de peso", "pérdida de peso"
             ],
             "pensamientos": [
-                "culpa", "inutilidad", "muerte", "suicidio", "pensamientos negativos", "pensamientos de autolesión", "deseos de morir", "no vale la pena vivir"
+                "culpa", "inutilidad", "muerte", "suicidio", "pensamientos negativos", "pensamientos de autolesión", "deseos de morir", "no vale la pena vivir",
+                "nunca podré", "no puedo lograr", "no tengo futuro", "no tengo posibilidades", "por mi pobreza", "por mi situación", "no merezco", "no valgo", "no soy suficiente", "no tengo oportunidad", "no tengo suerte", "no tengo recursos", "no tengo salida", "no tengo opción", "no tengo alternativa", "no tengo motivación", "no tengo ilusión", "no tengo sueños", "no tengo metas", "no tengo propósito"
             ]
         }
         
@@ -177,9 +181,9 @@ class MentalHealthAssessment:
         
         total_score = sum(scores.values())
         
-        if total_score >= 6:
+        if total_score >= 4:
             level = "Alto"
-        elif total_score >= 3:
+        elif total_score >= 2:
             level = "Moderado"
         else:
             level = "Bajo"

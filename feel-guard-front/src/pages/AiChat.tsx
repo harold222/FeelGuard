@@ -16,6 +16,7 @@ const AiChat: React.FC = () => {
   const audioChunks = useRef<Blob[]>([]);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
   const [showClearModal, setShowClearModal] = useState(false);
+  const [expandedDetails, setExpandedDetails] = useState<{[id: number]: boolean}>({});
 
   useEffect(() => {
     aiService.getChatHistoryWithAssessments().then(setHistory).catch(() => setHistory([]));
@@ -36,12 +37,114 @@ const AiChat: React.FC = () => {
     }
   };
 
+  // Explicaciones amigables para categorías
+  const categoryDescriptions: Record<string, string> = {
+    // Depresión
+    estado_animo: 'Estado de ánimo bajo, tristeza o desesperanza',
+    interés: 'Falta de interés o motivación en actividades',
+    sueño: 'Problemas para dormir o cambios en el sueño',
+    apetito: 'Cambios en el apetito o el peso',
+    pensamientos: 'Pensamientos negativos, de inutilidad o muerte',
+    // Ansiedad
+    preocupación: 'Preocupación excesiva o miedo',
+    físicos: 'Síntomas físicos (palpitaciones, sudoración, etc.)',
+    cognitivos: 'Dificultad para concentrarse o pensamientos intrusivos',
+    conductuales: 'Cambios en el comportamiento o evitación',
+    // Estrés
+    emocionales: 'Irritabilidad, frustración o ansiedad',
+    // Bienestar
+    físico: 'Salud física y energía',
+    emocional: 'Bienestar emocional y autoestima',
+    social: 'Relaciones y apoyo social',
+    ocupacional: 'Satisfacción con trabajo o estudios',
+  };
+
+  // Panel desplegable de detalles por mensaje
+  const toggleDetails = (id: number) => {
+    setExpandedDetails(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
   // Función para mostrar la evaluación
-  const renderAssessment = (assessment?: Assessment) => {
+  const renderAssessment = (assessment?: Assessment, msgId?: number) => {
     if (!assessment) return null;
-    // Ocultar si type o risk_level es vacío
     if (!assessment.type || !assessment.risk_level) return null;
     const riskColor = getRiskLevelColor(assessment.risk_level);
+    // Render detalle específico
+    const renderDetail = () => {
+      if (assessment.depression_assessment) {
+        const a = assessment.depression_assessment;
+        return (
+          <div className="assessment-detail">
+            <h4>Evaluación de Depresión</h4>
+            <p><strong>Puntaje:</strong> {a.score}</p>
+            <ul>
+              {Object.entries(a.categories).map(([cat, val]) => val > 0 && (
+                <li key={cat}>
+                  <strong>{categoryDescriptions[cat] || cat}:</strong> {val} <span style={{color:'#F44336', fontWeight:'bold'}}>{val >= 2 ? ' (Afectación importante)' : ' (Afectación leve)'}</span>
+                </li>
+              ))}
+            </ul>
+            {a.score === 0 && <p style={{color:'#4CAF50'}}>No se detectaron síntomas relevantes de depresión en tu mensaje.</p>}
+            {a.score > 0 && <p style={{color:'#FF9800'}}>Se detectaron señales de depresión en las áreas resaltadas. Si estos síntomas persisten, considera hablar con un profesional.</p>}
+          </div>
+        );
+      }
+      if (assessment.anxiety_assessment) {
+        const a = assessment.anxiety_assessment;
+        return (
+          <div className="assessment-detail">
+            <h4>Evaluación de Ansiedad</h4>
+            <p><strong>Puntaje:</strong> {a.score}</p>
+            <ul>
+              {Object.entries(a.categories).map(([cat, val]) => val > 0 && (
+                <li key={cat}>
+                  <strong>{categoryDescriptions[cat] || cat}:</strong> {val} <span style={{color:'#F44336', fontWeight:'bold'}}>{val >= 2 ? ' (Afectación importante)' : ' (Afectación leve)'}</span>
+                </li>
+              ))}
+            </ul>
+            {a.score === 0 && <p style={{color:'#4CAF50'}}>No se detectaron síntomas relevantes de ansiedad en tu mensaje.</p>}
+            {a.score > 0 && <p style={{color:'#FF9800'}}>Se detectaron señales de ansiedad en las áreas resaltadas. Si estos síntomas persisten o interfieren con tu vida diaria, considera buscar apoyo profesional.</p>}
+          </div>
+        );
+      }
+      if (assessment.stress_assessment) {
+        const a = assessment.stress_assessment;
+        return (
+          <div className="assessment-detail">
+            <h4>Evaluación de Estrés</h4>
+            <p><strong>Puntaje:</strong> {a.score}</p>
+            <ul>
+              {Object.entries(a.categories).map(([cat, val]) => val > 0 && (
+                <li key={cat}>
+                  <strong>{categoryDescriptions[cat] || cat}:</strong> {val} <span style={{color:'#F44336', fontWeight:'bold'}}>{val >= 2 ? ' (Afectación importante)' : ' (Afectación leve)'}</span>
+                </li>
+              ))}
+            </ul>
+            {a.score === 0 && <p style={{color:'#4CAF50'}}>No se detectaron síntomas relevantes de estrés en tu mensaje.</p>}
+            {a.score > 0 && <p style={{color:'#FF9800'}}>Se detectaron señales de estrés en las áreas resaltadas. Si el estrés es persistente, prueba técnicas de relajación o busca apoyo.</p>}
+          </div>
+        );
+      }
+      if (assessment.wellness_assessment) {
+        const a = assessment.wellness_assessment;
+        return (
+          <div className="assessment-detail">
+            <h4>Evaluación de Bienestar</h4>
+            <p><strong>Puntaje:</strong> {a.score}</p>
+            <ul>
+              {Object.entries(a.categories).map(([cat, val]) => val > 0 && (
+                <li key={cat}>
+                  <strong>{categoryDescriptions[cat] || cat}:</strong> {val} <span style={{color: val >= 2 ? '#4CAF50' : '#2196F3', fontWeight:'bold'}}>{val >= 2 ? ' (Fortaleza destacada)' : ' (Área positiva)'}</span>
+                </li>
+              ))}
+            </ul>
+            {a.score === 0 && <p style={{color:'#FF9800'}}>No se detectaron áreas de bienestar destacadas en tu mensaje. ¡Cuida tu salud física y emocional!</p>}
+            {a.score > 0 && <p style={{color:'#4CAF50'}}>¡Bien hecho! Se detectaron áreas de bienestar en tu mensaje. Sigue cuidando de ti y mantén estos hábitos positivos.</p>}
+          </div>
+        );
+      }
+      return null;
+    };
     return (
       <div className="assessment-card" style={{ borderLeft: `4px solid ${riskColor}` }}>
         <div className="assessment-header">
@@ -55,6 +158,16 @@ const AiChat: React.FC = () => {
           <p><strong>Nivel de riesgo:</strong> {assessment.risk_level}</p>
           <p><strong>Fecha:</strong> {new Date(assessment.timestamp).toLocaleString()}</p>
         </div>
+        {typeof msgId === 'number' && (
+          <button
+            className="toggle-details-btn"
+            onClick={() => toggleDetails(msgId)}
+            style={{margin:'8px 0', padding:'4px 12px', borderRadius:'6px', background:'#169ccf', color:'#fff', border:'none', cursor:'pointer'}}
+          >
+            {expandedDetails[msgId] ? 'Ocultar detalles' : 'Más detalles'}
+          </button>
+        )}
+        {typeof msgId === 'number' && expandedDetails[msgId] && renderDetail()}
       </div>
     );
   };
@@ -210,7 +323,7 @@ const AiChat: React.FC = () => {
             </div>
             {item.assessment && (
               <div className="assessment-container">
-                {renderAssessment(item.assessment)}
+                {renderAssessment(item.assessment, item.id)}
               </div>
             )}
           </div>
