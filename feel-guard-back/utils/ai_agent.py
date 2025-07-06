@@ -24,6 +24,8 @@ llm = langchain_config.get_chat_model()
 
 # Almacenamiento en memoria para las conversaciones (en producción usar Redis o BD)
 conversation_memory: Dict[str, ConversationBufferMemory] = {}
+# Contador global de mensajes neutros por sesión
+neutral_message_counts: Dict[str, int] = {}
 
 class SimpleMemory:
     def __init__(self, max_messages: int = 30):
@@ -40,6 +42,9 @@ class SimpleMemory:
     def clear_conversation(self, session_id: str):
         if session_id in conversation_memory:
             del conversation_memory[session_id]
+        # Limpiar también el contador de mensajes neutros
+        if session_id in neutral_message_counts:
+            del neutral_message_counts[session_id]
 
 memory = SimpleMemory(max_messages=30)
 
@@ -132,6 +137,9 @@ class AIAgent:
             conversation_history = conversation_memory.chat_memory.messages
             history_text = "\n".join([f"{msg.type}: {msg.content}" for msg in conversation_history[-6:]])  # Últimos 6 mensajes
             
+            # --- Manejo de mensajes neutros consecutivos usando diccionario global ---
+            count = neutral_message_counts.get(session_id, 0)
+            
             # Determinar el tipo de evaluación
             assessment_type = self.determine_assessment_type(text)
             
@@ -141,6 +149,34 @@ class AIAgent:
                 text=text,
                 assessment_type=assessment_type
             )
+
+            # Si se detecta sentimiento/emoción, reiniciar contador
+            if assessment_type is not None and assessment.get("type", "") != "":
+                neutral_message_counts[session_id] = 0
+            
+            # Si NO se detecta sentimiento/emoción relevante:
+            if assessment_type is None or assessment.get("type", "") == "":
+                count += 1
+                neutral_message_counts[session_id] = count
+
+                if count > 1:
+                    # Preguntas abiertas para guiar la conversación
+                    neutral_questions = [
+                        "¿Esa experiencia te generó alguna emoción o sentimiento en particular?",
+                        "Me gustaría saber, ¿cómo te sentiste en esa situación?",
+                    ]
+                    if count == 2:
+                        # Elegir pregunta según el número de intentos
+                        question = neutral_questions[count-1] if count-1 < len(neutral_questions) else neutral_questions[-1]
+                        return question
+                    else:
+                        # A partir del cuarto mensaje neutro, mostrar mensaje fijo
+                        return (
+                            "¡Hola! Soy la IA de FeelGuard, un asistente especializado en bienestar emocional.\n\n"
+                            "Este chat está diseñado para apoyarte en temas relacionados con tus emociones, sentimientos o estados de ánimo\n\n"
+                            "Si deseas conversar sobre cómo te sientes o necesitas orientación emocional, cuéntame un poco más sobre tu situación.\n\n"
+                            "Si tu mensaje no está relacionado con emociones o salud mental, por favor ten en cuenta que solo puedo ayudarte en esos temas. 😊"
+                        )
             
             # Determinar el prompt más apropiado
             system_prompt = self.get_appropriate_prompt(text, history_text)
