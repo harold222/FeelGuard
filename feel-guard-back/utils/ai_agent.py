@@ -16,6 +16,7 @@ from langchain.prompts import (
 from .langchain_config import langchain_config
 from .mental_health_prompts import mental_health_prompts
 from .mental_health_assessment import mental_health_assessment, AssessmentType
+import re
 
 load_dotenv()
 
@@ -26,6 +27,22 @@ llm = langchain_config.get_chat_model()
 conversation_memory: Dict[str, ConversationBufferMemory] = {}
 # Contador global de mensajes neutros por sesión
 neutral_message_counts: Dict[str, int] = {}
+
+# Lista de saludos y frases sociales comunes
+SOCIAL_GREETINGS = [
+    "hola", "buenos días", "buenas tardes", "buenas noches", "saludos", "qué tal", "como estas", "cómo estás", "como va", "cómo va", "que hay", "qué hay", "hey", "buen día", "buenas", "hello", "hi", "holi", "holis", "qué onda", "qué pasa", "qué más", "como vas", "cómo vas", "qué cuentas", "qué tal todo", "qué tal va todo"
+]
+
+def is_social_greeting(text: str) -> bool:
+    text_clean = text.strip().lower()
+    for greeting in SOCIAL_GREETINGS:
+        # Coincidencia exacta o pregunta
+        if re.fullmatch(rf"{re.escape(greeting)}[.!?¡¿ ]*", text_clean):
+            return True
+        # Coincidencia al inicio
+        if text_clean.startswith(greeting):
+            return True
+    return False
 
 class SimpleMemory:
     def __init__(self, max_messages: int = 30):
@@ -140,6 +157,11 @@ class AIAgent:
             # --- Manejo de mensajes neutros consecutivos usando diccionario global ---
             count = neutral_message_counts.get(session_id, 0)
             
+            # Detectar saludo o frase social
+            if is_social_greeting(text):
+                neutral_message_counts[session_id] = 0
+                return "¡Hola! 😊 ¿Cómo te encuentras hoy? Si quieres, cuéntame cómo te has sentido últimamente."
+            
             # Determinar el tipo de evaluación
             assessment_type = self.determine_assessment_type(text)
             
@@ -159,24 +181,14 @@ class AIAgent:
                 count += 1
                 neutral_message_counts[session_id] = count
 
-                if count > 1:
-                    # Preguntas abiertas para guiar la conversación
-                    neutral_questions = [
-                        "¿Esa experiencia te generó alguna emoción o sentimiento en particular?",
-                        "Me gustaría saber, ¿cómo te sentiste en esa situación?",
-                    ]
-                    if count == 2:
-                        # Elegir pregunta según el número de intentos
-                        question = neutral_questions[count-1] if count-1 < len(neutral_questions) else neutral_questions[-1]
-                        return question
-                    else:
-                        # A partir del cuarto mensaje neutro, mostrar mensaje fijo
-                        return (
-                            "¡Hola! Soy la IA de FeelGuard, un asistente especializado en bienestar emocional.\n\n"
-                            "Este chat está diseñado para apoyarte en temas relacionados con tus emociones, sentimientos o estados de ánimo\n\n"
-                            "Si deseas conversar sobre cómo te sientes o necesitas orientación emocional, cuéntame un poco más sobre tu situación.\n\n"
-                            "Si tu mensaje no está relacionado con emociones o salud mental, por favor ten en cuenta que solo puedo ayudarte en esos temas. 😊"
-                        )
+                if count >= 3:
+                    # A partir del cuarto mensaje neutro, mostrar mensaje fijo
+                    return (
+                        "¡Hola! Soy la IA de FeelGuard, un asistente especializado en bienestar emocional.\n\n"
+                        "Este chat está diseñado para apoyarte en temas relacionados con tus emociones, sentimientos o estados de ánimo\n\n"
+                        "Si deseas conversar sobre cómo te sientes o necesitas orientación emocional, cuéntame un poco más sobre tu situación.\n\n"
+                        "Si tu mensaje no está relacionado con emociones o salud mental, por favor ten en cuenta que solo puedo ayudarte en esos temas. 😊"
+                    )
             
             # Determinar el prompt más apropiado
             system_prompt = self.get_appropriate_prompt(text, history_text)
