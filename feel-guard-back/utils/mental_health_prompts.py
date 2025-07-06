@@ -143,35 +143,6 @@ Como especialista en depresión, evalúa los siguientes aspectos:
 - Recomienda evaluación profesional inmediata"""
 
     @staticmethod
-    def get_wellness_assessment_prompt() -> str:
-        """Prompt específico para evaluación de bienestar general"""
-        return """# Evaluación de Bienestar General
-
-Como especialista en bienestar, evalúa los siguientes aspectos:
-
-## Dimensiones del Bienestar:
-1. **Físico**: Sueño, alimentación, ejercicio, salud física
-2. **Emocional**: Manejo de emociones, autoconocimiento
-3. **Social**: Relaciones, conexiones, apoyo social
-4. **Intelectual**: Aprendizaje, crecimiento personal
-5. **Espiritual**: Propósito, valores, significado
-6. **Ocupacional**: Satisfacción laboral, balance trabajo-vida
-
-## Preguntas de Evaluación:
-- ¿Cómo te sientes con tu rutina diaria?
-- ¿Tienes tiempo para actividades que disfrutas?
-- ¿Cómo están tus relaciones personales?
-- ¿Te sientes realizado en tu trabajo o estudios?
-- ¿Qué haces para cuidar tu salud física y mental?
-
-## Respuesta Esperada:
-- Evalúa el balance en las diferentes áreas
-- Identifica fortalezas y áreas de mejora
-- Ofrece sugerencias para mejorar el bienestar
-- Promueve hábitos saludables
-- Sugiere actividades de autocuidado"""
-
-    @staticmethod
     def get_crisis_intervention_prompt() -> str:
         """Prompt para intervención en crisis"""
         return """# Intervención en Crisis

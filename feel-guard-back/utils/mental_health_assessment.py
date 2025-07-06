@@ -11,7 +11,6 @@ class AssessmentType(Enum):
     STRESS = "stress"
     ANXIETY = "anxiety"
     DEPRESSION = "depression"
-    WELLNESS = "wellness"
     CRISIS = "crisis"
 
 class RiskLevel(Enum):
@@ -195,46 +194,6 @@ class MentalHealthAssessment:
             "timestamp": datetime.now().isoformat()
         }
     
-    def assess_wellness_level(self, text: str) -> Dict:
-        """Evalúa el nivel de bienestar general"""
-        wellness_indicators = {
-            "físico": [
-                "ejercicio", "sueño", "alimentación", "energía", "actividad física", "descanso", "salud física", "bienestar corporal", "caminar", "deporte"
-            ],
-            "emocional": [
-                "feliz", "contento", "satisfecho", "paz", "tranquilidad", "optimismo", "autoestima", "gestión emocional", "resiliencia", "motivación"
-            ],
-            "social": [
-                "amigos", "familia", "relaciones", "apoyo", "red de apoyo", "conexión social", "interacción social", "comunidad", "compañía"
-            ],
-            "ocupacional": [
-                "trabajo", "estudios", "propósito", "logros", "productividad", "satisfacción laboral", "crecimiento profesional", "desarrollo personal", "objetivos"
-            ]
-        }
-        
-        text_lower = text.lower()
-        scores = {}
-        
-        for category, indicators in wellness_indicators.items():
-            score = sum(1 for indicator in indicators if indicator in text_lower)
-            scores[category] = score
-        
-        total_score = sum(scores.values())
-        
-        if total_score >= 4:
-            level = "Alto"
-        elif total_score >= 2:
-            level = "Moderado"
-        else:
-            level = "Bajo"
-        
-        return {
-            "level": level,
-            "score": total_score,
-            "categories": scores,
-            "timestamp": datetime.now().isoformat()
-        }
-    
     def create_assessment(self, session_id: str, text: str, assessment_type: AssessmentType) -> Dict:
         """Crea una evaluación completa"""
         risk_level = self.assess_risk_level(text)
@@ -256,8 +215,6 @@ class MentalHealthAssessment:
             assessment["anxiety_assessment"] = self.assess_anxiety_level(text)
         elif assessment_type == AssessmentType.DEPRESSION:
             assessment["depression_assessment"] = self.assess_depression_level(text)
-        elif assessment_type == AssessmentType.WELLNESS:
-            assessment["wellness_assessment"] = self.assess_wellness_level(text)
         elif assessment_type == AssessmentType.CRISIS:
             assessment["crisis_indicators"] = {
                 "suicidal_ideation": any(word in text.lower() for word in ["suicidio", "morir", "acabar"]),
@@ -351,9 +308,6 @@ class MentalHealthAssessment:
             
             elif assessment_type == "depression" and assessment.get("depression_assessment", {}).get("level") == "Alto":
                 recommendations.append("Es importante buscar apoyo profesional para evaluar tu estado de ánimo")
-            
-            elif assessment_type == "wellness" and assessment.get("wellness_assessment", {}).get("level") == "Bajo":
-                recommendations.append("Intenta incorporar pequeñas actividades de autocuidado en tu rutina diaria")
         
         return recommendations
 

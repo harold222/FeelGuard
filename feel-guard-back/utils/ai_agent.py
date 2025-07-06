@@ -111,9 +111,6 @@ class AIAgent:
         ]):
             return AssessmentType.DEPRESSION
         
-        if any(word in text_lower for word in ["bienestar", "salud", "ejercicio", "sueño", "alimentación"]):
-            return AssessmentType.WELLNESS
-        
         # Por defecto, si no coincide con ningún patrón, retornar None
         return None
     
@@ -134,9 +131,6 @@ class AIAgent:
         
         if any(word in text_lower for word in ["depresión", "deprimido", "deprimida", "triste", "sin esperanza", "vacío", "problema"]):
             return mental_health_prompts.get_depression_assessment_prompt()
-        
-        if any(word in text_lower for word in ["bienestar", "salud", "ejercicio", "sueño", "alimentación"]):
-            return mental_health_prompts.get_wellness_assessment_prompt()
         
         # Si es una conversación continua, usar prompt de seguimiento
         if len(conversation_history) > 2:

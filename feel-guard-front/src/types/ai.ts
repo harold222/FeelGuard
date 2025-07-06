@@ -1,14 +1,13 @@
 // Tipos para las evaluaciones de salud mental
 export interface Assessment {
   session_id: string;
-  type: 'stress' | 'anxiety' | 'depression' | 'wellness' | 'crisis';
+  type: 'stress' | 'anxiety' | 'depression' | 'crisis';
   risk_level: 'low' | 'moderate' | 'high' | 'critical';
   timestamp: string;
   text_sample: string;
   stress_assessment?: StressAssessment;
   anxiety_assessment?: AnxietyAssessment;
   depression_assessment?: DepressionAssessment;
-  wellness_assessment?: WellnessAssessment;
   crisis_indicators?: CrisisIndicators;
 }
 
@@ -49,18 +48,6 @@ export interface DepressionAssessment {
   timestamp: string;
 }
 
-export interface WellnessAssessment {
-  level: 'Bajo' | 'Moderado' | 'Alto';
-  score: number;
-  categories: {
-    físico: number;
-    emocional: number;
-    social: number;
-    ocupacional: number;
-  };
-  timestamp: string;
-}
-
 export interface CrisisIndicators {
   suicidal_ideation: boolean;
   self_harm: boolean;
@@ -97,7 +84,6 @@ export interface UserAssessmentSummary {
     stress: number;
     anxiety: number;
     depression: number;
-    wellness: number;
     crisis: number;
   };
   average_risk_score: number;
