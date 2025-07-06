@@ -64,7 +64,6 @@ const AiChat: React.FC = () => {
     stress: 'Estrés',
     anxiety: 'Ansiedad',
     depression: 'Depresión',
-    wellness: 'Bienestar',
     crisis: 'Crisis',
   };
   const riskLevelTranslations: Record<string, string> = {
@@ -137,24 +136,6 @@ const AiChat: React.FC = () => {
             </ul>
             {a.score === 0 && <p style={{color:'#4CAF50'}}>No se detectaron síntomas relevantes de estrés en tu mensaje.</p>}
             {a.score > 0 && <p style={{color:'#FF9800'}}>Se detectaron señales de estrés en las áreas resaltadas. Si el estrés es persistente, prueba técnicas de relajación o busca apoyo.</p>}
-          </div>
-        );
-      }
-      if (assessment.wellness_assessment) {
-        const a = assessment.wellness_assessment;
-        return (
-          <div className="assessment-detail">
-            <h4>Evaluación de Bienestar</h4>
-            <p><strong>Puntaje:</strong> {a.score}</p>
-            <ul>
-              {Object.entries(a.categories).map(([cat, val]) => val > 0 && (
-                <li key={cat}>
-                  <strong>{categoryDescriptions[cat] || cat}:</strong> {val} <span style={{color: val >= 2 ? '#4CAF50' : '#2196F3', fontWeight:'bold'}}>{val >= 2 ? ' (Fortaleza destacada)' : ' (Área positiva)'}</span>
-                </li>
-              ))}
-            </ul>
-            {a.score === 0 && <p style={{color:'#FF9800'}}>No se detectaron áreas de bienestar destacadas en tu mensaje. ¡Cuida tu salud física y emocional!</p>}
-            {a.score > 0 && <p style={{color:'#4CAF50'}}>¡Bien hecho! Se detectaron áreas de bienestar en tu mensaje. Sigue cuidando de ti y mantén estos hábitos positivos.</p>}
           </div>
         );
       }
