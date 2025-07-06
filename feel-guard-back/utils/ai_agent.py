@@ -51,7 +51,15 @@ class AIAgent:
             "mejor estar muerto", "acabar con todo", "no aguanto más",
             "autolesión", "cortarme", "herirme", "dolor físico", "crisis",
             "ataque de pánico", "no puedo respirar", "me voy a morir",
-            "pensamientos intrusivos", "voces", "alucinaciones"
+            "pensamientos intrusivos", "voces", "alucinaciones", 
+            "no valgo para nada", "nadie me quiere", "sería mejor no existir"
+            "estoy harto(a) de vivir", "no siento ganas de seguir", "todo da igual"
+            "ya no tiene sentido", "ya no puedo más",
+            "me estoy volviendo loco(a)", "me estoy desquiciando",
+            "odia cuando me siento vacío(a)", "nada importa",
+            "voy a buscar cómo matarme", "estoy planeándolo",
+            "he pensado en cómo hacerlo", "buscando métodos",
+            "si pudiera desaparecer", "ya tengo todo preparado"
         ]
     
     def detect_crisis(self, text: str) -> bool:
@@ -74,14 +82,18 @@ class AIAgent:
         if any(word in text_lower for word in ["ansiedad", "ansioso", "ansiosa", "preocupado", "preocupada", "pánico"]):
             return AssessmentType.ANXIETY
         
-        if any(word in text_lower for word in ["depresión", "deprimido", "deprimida", "triste", "sin esperanza", "vacío"]):
+        if any(word in text_lower for word in [
+            "depresión", "deprimido", "deprimida", "triste", "sin esperanza", "vacío", "problema",
+            "abrumado", "abrumada", "no encuentro salida", "no tengo ganas", "no tengo fuerzas", "no puedo más", "no puedo mas", "me siento vacío", "me siento vacio", "me siento solo", "me siento sola", "me siento sin esperanza", "me siento sin salida", "me siento destruido", "me siento destruida", "me siento fatal", "me siento sin valor", "me siento sin sentido", "me siento sin futuro", "me siento sin ganas de vivir",
+            "nunca podré", "no puedo lograr", "no tengo futuro", "no tengo posibilidades", "por mi pobreza", "por mi situación", "no merezco", "no valgo", "no soy suficiente", "no tengo oportunidad", "no tengo suerte", "no tengo recursos", "no tengo salida", "no tengo opción", "no tengo alternativa", "no tengo motivación", "no tengo ilusión", "no tengo sueños", "no tengo metas", "no tengo propósito"
+        ]):
             return AssessmentType.DEPRESSION
         
         if any(word in text_lower for word in ["bienestar", "salud", "ejercicio", "sueño", "alimentación"]):
             return AssessmentType.WELLNESS
         
-        # Por defecto, evaluar como estrés (más común)
-        return AssessmentType.STRESS
+        # Por defecto, si no coincide con ningún patrón, retornar None
+        return None
     
     def get_appropriate_prompt(self, text: str, conversation_history: List[str]) -> str:
         """Determina el prompt más apropiado basado en el contenido del mensaje"""
@@ -98,7 +110,7 @@ class AIAgent:
         if any(word in text_lower for word in ["ansiedad", "ansioso", "ansiosa", "preocupado", "preocupada", "pánico"]):
             return mental_health_prompts.get_anxiety_assessment_prompt()
         
-        if any(word in text_lower for word in ["depresión", "deprimido", "deprimida", "triste", "sin esperanza", "vacío"]):
+        if any(word in text_lower for word in ["depresión", "deprimido", "deprimida", "triste", "sin esperanza", "vacío", "problema"]):
             return mental_health_prompts.get_depression_assessment_prompt()
         
         if any(word in text_lower for word in ["bienestar", "salud", "ejercicio", "sueño", "alimentación"]):

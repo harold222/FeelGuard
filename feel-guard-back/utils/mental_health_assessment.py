@@ -25,50 +25,65 @@ class MentalHealthAssessment:
         self.assessment_history: Dict[str, List[Dict]] = {}
         self.risk_keywords = {
             RiskLevel.LOW: [
-                "ligero", "leve", "poco", "ocasional", "manejable"
+                "ligero", "leve", "poco", "ocasional", "manejable", "tranquilo", "tranquila", "controlable", "soportable", "no es grave", "puedo manejarlo", "no me afecta mucho", "es pasajero", "es temporal", "me siento bien la mayor parte del tiempo"
             ],
             RiskLevel.MODERATE: [
-                "moderado", "regular", "frecuente", "interfiere", "difícil"
+                "moderado", "regular", "frecuente", "interfiere", "difícil", "dificil", "estresado", "estresada", "tenso", "tensa", "me cuesta", "me afecta", "me preocupa seguido", "me siento presionado", "me siento presionada", "me siento ansioso", "me siento ansiosa", "me siento nervioso", "me siento nerviosa", "me siento inquieto", "me siento inquieta", "me siento inseguro", "me siento insegura", "me siento frustrado", "me siento frustrada", "me siento irritable", "me siento irritable a veces", "me siento cansado", "me siento cansada", "nunca podré", "no puedo lograr", "no tengo posibilidades", "por mi pobreza", "por mi situación", "no merezco", "no valgo", "no soy suficiente", "no tengo oportunidad", "no tengo suerte", "no tengo recursos", "no tengo opción", "no tengo alternativa", "no tengo motivación", "no tengo ilusión", "no tengo sueños", "no tengo metas", "no tengo propósito"
             ],
             RiskLevel.HIGH: [
-                "severo", "intenso", "constante", "abrumador", "no puedo"
+                "severo", "severa", "intenso", "intensa", "constante", "abrumador", "abrumadora", "no puedo", "no puedo más", "no puedo mas", "no soporto", "no encuentro salida", "me siento atrapado", "me siento atrapada", "me siento sin salida", "me siento desesperado", "me siento desesperada", "me siento muy mal", "me siento fatal", "me siento destruido", "me siento destruida", "no tengo fuerzas", "no tengo energia", "no tengo energía", "no tengo ganas de nada", "no tengo motivación", "no tengo motivacion", "no tengo ilusión", "no tengo ilusion", "no tengo esperanza", "no tengo apoyo", "me siento solo", "me siento sola", "me siento abandonado", "me siento abandonada", "me siento incomprendido", "me siento incomprendida", "me siento muy ansioso", "me siento muy ansiosa", "me siento muy triste", "me siento muy cansado", "me siento muy cansada", "nunca podré", "no puedo lograr", "no tengo futuro", "no tengo posibilidades", "por mi pobreza", "por mi situación", "no merezco", "no valgo", "no soy suficiente", "no tengo oportunidad", "no tengo suerte", "no tengo recursos", "no tengo salida", "no tengo opción", "no tengo alternativa", "no tengo motivación", "no tengo ilusión", "no tengo sueños", "no tengo metas", "no tengo propósito"
             ],
             RiskLevel.CRITICAL: [
-                "suicidio", "morir", "acabar", "no aguanto", "crisis", "pánico"
+                "suicidio", "suicidar", "suicidarme", "suicidarse", "morir", "morirme", "acabar", "acabar con todo", "no aguanto", "no aguanto más", "no aguanto mas", "crisis", "pánico", "panico", "no quiero vivir", "mejor estar muerto", "mejor estar muerta", "no puedo más", "no puedo mas", "me rindo", "quiero acabar con todo", "no le encuentro sentido a la vida", "quiero morir", "no vale la pena vivir", "no tengo ganas de vivir", "me quiero morir", "no tengo motivos para vivir", "no encuentro sentido a nada", "no encuentro sentido", "no quiero seguir", "no quiero seguir viviendo", "no quiero despertar", "quisiera desaparecer", "quisiera no existir", "quisiera no haber nacido", "me haría daño", "me haria daño", "quiero hacerme daño", "quiero hacerme dano", "quiero lastimarme", "quiero lastimarme a mi mismo", "quiero lastimarme a mi misma", "quiero cortarme", "quiero herirme", "quiero autolesionarme", "me autolesiono", "me autolesioné", "me autolesione", "me corto", "me corté", "me corte", "me hago daño", "me hago dano", "me lastimo", "me lastimé", "me lastime", "no puedo respirar", "me voy a morir", "no quiero hablar con nadie", "no quiero ver a nadie", "no quiero salir de la cama", "no quiero salir de mi cuarto", "no quiero hacer nada", "no tengo ganas de nada", "no tengo fuerzas para nada", "no tengo energia para nada", "no tengo energía para nada", "no tengo esperanza en nada", "no tengo apoyo de nadie", "me siento completamente solo", "me siento completamente sola", "me siento vacío", "me siento vacio", "me siento sin valor", "me siento sin sentido", "me siento sin esperanza", "me siento sin futuro", "me siento sin ganas de vivir"
             ]
         }
     
     def assess_risk_level(self, text: str) -> RiskLevel:
         """Evalúa el nivel de riesgo basado en el contenido del texto"""
         text_lower = text.lower()
+        # Mejorar: contar matches de frases completas, no solo palabras sueltas
+        def count_matches(phrases, text):
+            count = 0
+            for phrase in phrases:
+                if phrase in text:
+                    count += 1
+            return count
         
         # Verificar nivel crítico primero
-        if any(keyword in text_lower for keyword in self.risk_keywords[RiskLevel.CRITICAL]):
+        if any(phrase in text_lower for phrase in self.risk_keywords[RiskLevel.CRITICAL]):
             return RiskLevel.CRITICAL
         
-        # Contar palabras de cada nivel
+        # Contar palabras/frases de cada nivel
         risk_counts = {}
         for level, keywords in self.risk_keywords.items():
-            count = sum(1 for keyword in keywords if keyword in text_lower)
-            risk_counts[level] = count
-        
+            risk_counts[level] = count_matches(keywords, text_lower)
+
         # Determinar nivel basado en conteos
-        if risk_counts[RiskLevel.HIGH] >= 2:
+        if risk_counts[RiskLevel.HIGH] >= 1:
             return RiskLevel.HIGH
-        elif risk_counts[RiskLevel.MODERATE] >= 2:
+        elif risk_counts[RiskLevel.MODERATE] >= 1:
             return RiskLevel.MODERATE
         elif risk_counts[RiskLevel.LOW] >= 1:
             return RiskLevel.LOW
-        
-        return RiskLevel.LOW
+        # Si no hay ningún match, retornar cadena vacía
+        return ""
     
     def assess_stress_level(self, text: str) -> Dict:
         """Evalúa específicamente el nivel de estrés"""
         stress_indicators = {
-            "físicos": ["dolor de cabeza", "tensión", "fatiga", "insomnio", "dolor muscular"],
-            "emocionales": ["irritabilidad", "ansiedad", "frustración", "impaciencia"],
-            "cognitivos": ["dificultad para concentrarse", "olvidos", "confusión"],
-            "conductuales": ["cambios en el apetito", "aislamiento", "procrastinación"]
+            "físicos": [
+                "dolor de cabeza", "tensión", "fatiga", "insomnio", "dolor muscular", "palpitaciones", "sudoración", "temblores", "mareos", "náuseas", "presión en el pecho", "taquicardia", "cansancio", "agotamiento", "malestar físico", "problemas digestivos", "sudor frío"
+            ],
+            "emocionales": [
+                "irritabilidad", "ansiedad", "frustración", "impaciencia", "enojo", "rabia", "tristeza", "llanto fácil", "sentirse abrumado", "desesperanza", "desánimo", "desmotivación",
+                "preocupación económica", "preocupación por el dinero", "preocupación por el trabajo", "preocupación por el futuro", "preocupación por la familia", "preocupación por la salud", "preocupación por la situación", "preocupación por la pobreza"
+            ],
+            "cognitivos": [
+                "dificultad para concentrarse", "olvidos", "confusión", "pensamientos acelerados", "preocupación constante", "bloqueo mental", "dificultad para tomar decisiones", "rumiación"
+            ],
+            "conductuales": [
+                "cambios en el apetito", "aislamiento", "procrastinación", "evitación", "consumo de sustancias", "aumento de consumo de café", "fumar más", "comer en exceso", "insomnio conductual", "descuidar responsabilidades"
+            ]
         }
         
         text_lower = text.lower()
@@ -97,10 +112,19 @@ class MentalHealthAssessment:
     def assess_anxiety_level(self, text: str) -> Dict:
         """Evalúa específicamente el nivel de ansiedad"""
         anxiety_indicators = {
-            "preocupación": ["preocupado", "preocupada", "preocupación", "miedo", "temor"],
-            "físicos": ["palpitaciones", "sudoración", "temblores", "mareos", "náuseas"],
-            "cognitivos": ["pensamientos intrusivos", "catastrofización", "rumiación"],
-            "conductuales": ["evitación", "escape", "compulsiones"]
+            "preocupación": [
+                "preocupado", "preocupada", "preocupación", "miedo", "temor", "nervioso", "nerviosa", "inquietud", "inseguridad", "pánico", "sentirse en peligro", "anticipación negativa", "temor al futuro",
+                "preocupación económica", "preocupación por el dinero", "preocupación por el trabajo", "preocupación por el futuro", "preocupación por la familia", "preocupación por la salud", "preocupación por la situación", "preocupación por la pobreza"
+            ],
+            "físicos": [
+                "palpitaciones", "sudoración", "temblores", "mareos", "náuseas", "opresión en el pecho", "dificultad para respirar", "boca seca", "hormigueo", "tensión muscular", "dolor de estómago", "taquicardia"
+            ],
+            "cognitivos": [
+                "pensamientos intrusivos", "catastrofización", "rumiación", "dificultad para concentrarse", "miedo irracional", "preocupación excesiva", "duda constante", "hipervigilancia"
+            ],
+            "conductuales": [
+                "evitación", "escape", "compulsiones", "revisar repetidamente", "buscar seguridad", "inquietud motora", "incapacidad para quedarse quieto", "morderse las uñas", "tics nerviosos"
+            ]
         }
         
         text_lower = text.lower()
@@ -129,11 +153,23 @@ class MentalHealthAssessment:
     def assess_depression_level(self, text: str) -> Dict:
         """Evalúa específicamente el nivel de depresión"""
         depression_indicators = {
-            "estado_animo": ["triste", "vacío", "sin esperanza", "desesperado"],
-            "interés": ["pérdida de interés", "sin motivación", "apatía"],
-            "sueño": ["insomnio", "dormir demasiado", "cambios en el sueño"],
-            "apetito": ["pérdida de apetito", "comer en exceso", "cambios de peso"],
-            "pensamientos": ["culpa", "inutilidad", "muerte", "suicidio"]
+            "estado_animo": [
+                "triste", "vacío", "sin esperanza", "desesperado", "abatido", "desanimado", "llanto frecuente", "sentirse inútil", "culpa", "vergüenza", "apatía", "indiferencia",
+                "nunca podré", "no puedo lograr", "no tengo futuro", "no tengo posibilidades", "por mi pobreza", "por mi situación", "no merezco", "no valgo", "no soy suficiente", "no tengo oportunidad", "no tengo suerte", "no tengo recursos", "no tengo salida", "no tengo opción", "no tengo alternativa", "no tengo motivación", "no tengo ilusión", "no tengo sueños", "no tengo metas", "no tengo propósito"
+            ],
+            "interés": [
+                "pérdida de interés", "sin motivación", "apatía", "nada me interesa", "no disfruto nada", "falta de placer", "anhedonia"
+            ],
+            "sueño": [
+                "insomnio", "dormir demasiado", "cambios en el sueño", "despertar temprano", "dificultad para dormir", "sueño interrumpido", "pesadillas"
+            ],
+            "apetito": [
+                "pérdida de apetito", "comer en exceso", "cambios de peso", "falta de hambre", "aumento de peso", "pérdida de peso"
+            ],
+            "pensamientos": [
+                "culpa", "inutilidad", "muerte", "suicidio", "pensamientos negativos", "pensamientos de autolesión", "deseos de morir", "no vale la pena vivir",
+                "nunca podré", "no puedo lograr", "no tengo futuro", "no tengo posibilidades", "por mi pobreza", "por mi situación", "no merezco", "no valgo", "no soy suficiente", "no tengo oportunidad", "no tengo suerte", "no tengo recursos", "no tengo salida", "no tengo opción", "no tengo alternativa", "no tengo motivación", "no tengo ilusión", "no tengo sueños", "no tengo metas", "no tengo propósito"
+            ]
         }
         
         text_lower = text.lower()
@@ -145,9 +181,9 @@ class MentalHealthAssessment:
         
         total_score = sum(scores.values())
         
-        if total_score >= 6:
+        if total_score >= 4:
             level = "Alto"
-        elif total_score >= 3:
+        elif total_score >= 2:
             level = "Moderado"
         else:
             level = "Bajo"
@@ -162,10 +198,18 @@ class MentalHealthAssessment:
     def assess_wellness_level(self, text: str) -> Dict:
         """Evalúa el nivel de bienestar general"""
         wellness_indicators = {
-            "físico": ["ejercicio", "sueño", "alimentación", "energía"],
-            "emocional": ["feliz", "contento", "satisfecho", "paz"],
-            "social": ["amigos", "familia", "relaciones", "apoyo"],
-            "ocupacional": ["trabajo", "estudios", "propósito", "logros"]
+            "físico": [
+                "ejercicio", "sueño", "alimentación", "energía", "actividad física", "descanso", "salud física", "bienestar corporal", "caminar", "deporte"
+            ],
+            "emocional": [
+                "feliz", "contento", "satisfecho", "paz", "tranquilidad", "optimismo", "autoestima", "gestión emocional", "resiliencia", "motivación"
+            ],
+            "social": [
+                "amigos", "familia", "relaciones", "apoyo", "red de apoyo", "conexión social", "interacción social", "comunidad", "compañía"
+            ],
+            "ocupacional": [
+                "trabajo", "estudios", "propósito", "logros", "productividad", "satisfacción laboral", "crecimiento profesional", "desarrollo personal", "objetivos"
+            ]
         }
         
         text_lower = text.lower()
@@ -194,11 +238,13 @@ class MentalHealthAssessment:
     def create_assessment(self, session_id: str, text: str, assessment_type: AssessmentType) -> Dict:
         """Crea una evaluación completa"""
         risk_level = self.assess_risk_level(text)
-        
+        # Si assessment_type es None, poner cadena vacía
+        type_value = assessment_type.value if assessment_type else ""
+        risk_level_value = risk_level.value if hasattr(risk_level, 'value') else (risk_level if risk_level else "")
         assessment = {
             "session_id": session_id,
-            "type": assessment_type.value,
-            "risk_level": risk_level.value,
+            "type": type_value,
+            "risk_level": risk_level_value,
             "timestamp": datetime.now().isoformat(),
             "text_sample": text[:200] + "..." if len(text) > 200 else text
         }

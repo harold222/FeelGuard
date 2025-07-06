@@ -29,21 +29,21 @@ const Dashboard: React.FC = () => {
 
   const getRiskLevelColor = (level: string) => {
     switch (level.toLowerCase()) {
-      case 'low': return '#4CAF50';
-      case 'moderate': return '#FF9800';
-      case 'high': return '#F44336';
-      case 'critical': return '#9C27B0';
+      case 'Bajo': return '#4CAF50';
+      case 'Moderado': return '#FF9800';
+      case 'Alto': return '#F44336';
+      case 'Critico': return '#9C27B0';
       default: return '#9E9E9E';
     }
   };
 
   const getAssessmentTypeColor = (type: string) => {
     switch (type) {
-      case 'stress': return '#FF5722';
-      case 'anxiety': return '#FF9800';
-      case 'depression': return '#2196F3';
-      case 'wellness': return '#4CAF50';
-      case 'crisis': return '#F44336';
+      case 'Estrés': return '#FF5722';
+      case 'Ansiedad': return '#FF9800';
+      case 'Depresión': return '#2196F3';
+      case 'Bienestar': return '#4CAF50';
+      case 'Crisis': return '#F44336';
       default: return '#9E9E9E';
     }
   };
