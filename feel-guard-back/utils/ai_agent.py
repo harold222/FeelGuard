@@ -51,7 +51,15 @@ class AIAgent:
             "mejor estar muerto", "acabar con todo", "no aguanto más",
             "autolesión", "cortarme", "herirme", "dolor físico", "crisis",
             "ataque de pánico", "no puedo respirar", "me voy a morir",
-            "pensamientos intrusivos", "voces", "alucinaciones"
+            "pensamientos intrusivos", "voces", "alucinaciones", 
+            "no valgo para nada", "nadie me quiere", "sería mejor no existir"
+            "estoy harto(a) de vivir", "no siento ganas de seguir", "todo da igual"
+            "ya no tiene sentido", "ya no puedo más",
+            "me estoy volviendo loco(a)", "me estoy desquiciando",
+            "odia cuando me siento vacío(a)", "nada importa",
+            "voy a buscar cómo matarme", "estoy planeándolo",
+            "he pensado en cómo hacerlo", "buscando métodos",
+            "si pudiera desaparecer", "ya tengo todo preparado"
         ]
     
     def detect_crisis(self, text: str) -> bool:
@@ -74,7 +82,7 @@ class AIAgent:
         if any(word in text_lower for word in ["ansiedad", "ansioso", "ansiosa", "preocupado", "preocupada", "pánico"]):
             return AssessmentType.ANXIETY
         
-        if any(word in text_lower for word in ["depresión", "deprimido", "deprimida", "triste", "sin esperanza", "vacío"]):
+        if any(word in text_lower for word in ["depresión", "deprimido", "deprimida", "triste", "sin esperanza", "vacío", "problema"]):
             return AssessmentType.DEPRESSION
         
         if any(word in text_lower for word in ["bienestar", "salud", "ejercicio", "sueño", "alimentación"]):
@@ -98,7 +106,7 @@ class AIAgent:
         if any(word in text_lower for word in ["ansiedad", "ansioso", "ansiosa", "preocupado", "preocupada", "pánico"]):
             return mental_health_prompts.get_anxiety_assessment_prompt()
         
-        if any(word in text_lower for word in ["depresión", "deprimido", "deprimida", "triste", "sin esperanza", "vacío"]):
+        if any(word in text_lower for word in ["depresión", "deprimido", "deprimida", "triste", "sin esperanza", "vacío", "problema"]):
             return mental_health_prompts.get_depression_assessment_prompt()
         
         if any(word in text_lower for word in ["bienestar", "salud", "ejercicio", "sueño", "alimentación"]):
