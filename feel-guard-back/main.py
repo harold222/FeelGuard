@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse, Response
 import uvicorn
 from dotenv import load_dotenv
 import os
+from fastapi.staticfiles import StaticFiles
 
 # Cargar variables de entorno
 load_dotenv()
@@ -44,6 +45,12 @@ app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
 app.include_router(ai.router, prefix="/api/ai", tags=["AI"])
 app.include_router(registro.router, tags=["Registro"])
+
+# Crear la carpeta uploads si no existe
+os.makedirs("uploads", exist_ok=True)
+
+# Servir archivos de audio (uploads) de forma estática
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 if __name__ == "__main__":
     uvicorn.run(

@@ -113,6 +113,8 @@ export interface ChatMessage {
   created_at: string;
   assessment?: Assessment;
   risk_level?: string;
+  audio_path?: string;
+  message_type?: 'text' | 'audio';
 }
 
 // Tipos para el dashboard

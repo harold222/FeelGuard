@@ -127,16 +127,16 @@ const AiChat: React.FC = () => {
       const file = new File([audioBlob], 'nota-voz.webm', { type: 'audio/webm' });
       const res = await aiService.processVoice(file, sessionId || undefined);
       setSessionId(res.session_id);
-      
       const newMessage: ChatMessage = {
         id: Date.now(),
-        message: '[Nota de voz]',
+        message: '', // No texto, solo audio
         response: res.output,
         created_at: new Date().toISOString(),
         assessment: res.assessment,
-        risk_level: res.risk_level
+        risk_level: res.risk_level,
+        audio_path: audioUrl, // Usar la URL local para previsualización inmediata
+        message_type: 'audio'
       };
-      
       setHistory(h => [...h, newMessage]);
       setAudioUrl(null);
     } catch (err: unknown) {
@@ -183,7 +183,19 @@ const AiChat: React.FC = () => {
         {history.map((item, idx) => (
           <div key={item.id + '-' + idx} className="chat-bubble-group">
             <div className="chat-bubble user">
-              <span>{item.message}</span>
+              {item.message_type === 'audio' && item.audio_path ? (
+                <audio
+                  src={item.audio_path.startsWith('blob:')
+                    ? item.audio_path
+                    : item.audio_path.startsWith('http')
+                      ? item.audio_path
+                      : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/${item.audio_path.replace(/^\/+/, '')}`}
+                  controls
+                  style={{ width: '100%' }}
+                />
+              ) : (
+                <span>{item.message}</span>
+              )}
               <div className="chat-time">
                 {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </div>

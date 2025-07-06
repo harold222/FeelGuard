@@ -11,6 +11,9 @@ from models.registro import Registro
 from models.chat_history import ChatHistory
 from fastapi import status
 from datetime import datetime
+import os
+from tempfile import NamedTemporaryFile
+import io
 
 router = APIRouter()
 
@@ -29,6 +32,8 @@ class ChatHistoryItem(BaseModel):
     message: str
     response: str
     created_at: datetime
+    audio_path: Optional[str] = None
+    message_type: Optional[str] = "text"
     class Config:
         from_attributes = True
         json_encoders = {
@@ -45,6 +50,8 @@ class UserAssessmentSummary(BaseModel):
     average_risk_score: float
     most_common_concern: str
     recommendations: List[str]
+
+UPLOAD_DIR = "uploads"
 
 @router.post("/process-text", response_model=AIResponse)
 async def process_text_message(
@@ -97,14 +104,30 @@ async def process_voice_message(
     Procesa un mensaje de voz, lo transcribe y devuelve la respuesta de la IA junto con la evaluación de salud mental.
     """
     session_id = session_id or str(uuid.uuid4())
-    
-    # Transcribir audio a texto
-    transcribed_text = await voice_processor.transcribe_audio(audio)
-    
+    # Guardar el archivo de audio en uploads/
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    audio_filename = f"{session_id}_{audio.filename}"
+    audio_path = os.path.join(UPLOAD_DIR, audio_filename)
+    content = await audio.read()
+    with open(audio_path, "wb") as f:
+        f.write(content)
+    # Transcribir audio a texto usando el mismo contenido
+    audio_bytes = io.BytesIO(content)
+    audio_bytes.name = audio.filename if audio.filename else "audio.webm"
+    transcribed_text = await voice_processor.transcribe_audio_from_bytes(audio_bytes)
     # Procesar el texto transcrito con la IA
     response = await ai_agent.process_message(transcribed_text, session_id)
-    
-    # Obtener evaluación de salud mental
+    # Guardar historial en la base de datos
+    chat_entry = ChatHistory(
+        user_id=current_user.id,
+        message=transcribed_text,
+        response=response,
+        audio_path=audio_path,
+        message_type="audio"
+    )
+    db.add(chat_entry)
+    db.commit()
+    db.refresh(chat_entry)
     from utils.mental_health_assessment import mental_health_assessment, AssessmentType
     assessment_type = ai_agent.determine_assessment_type(transcribed_text)
     assessment = mental_health_assessment.create_assessment(
@@ -112,17 +135,6 @@ async def process_voice_message(
         text=transcribed_text,
         assessment_type=assessment_type
     )
-    
-    # Guardar historial en la base de datos
-    chat_entry = ChatHistory(
-        user_id=current_user.id,
-        message=transcribed_text,
-        response=response
-    )
-    db.add(chat_entry)
-    db.commit()
-    db.refresh(chat_entry)
-    
     return AIResponse(
         output=response, 
         session_id=session_id,
@@ -141,13 +153,30 @@ async def get_chat_history(
     history = db.query(ChatHistory).filter(ChatHistory.user_id == current_user.id).order_by(ChatHistory.created_at.asc()).all()
     return history
 
-@router.delete("/conversation/{session_id}")
-async def clear_conversation(session_id: str):
+@router.delete("/clear-conversation")
+async def clear_conversation(
+    db: Session = Depends(get_db),
+    current_user: Registro = Depends(get_current_active_user)
+):
     """
-    Limpia el historial de conversación de una sesión específica.
+    Limpia todo el historial de conversación del usuario autenticado y elimina los archivos de audio asociados.
     """
-    memory.clear_conversation(session_id)
-    return {"message": f"Conversation {session_id} cleared"}
+    # Buscar todos los mensajes del usuario
+    history = db.query(ChatHistory).filter(ChatHistory.user_id == current_user.id).all()
+    # Eliminar archivos de audio si existen
+    for chat in history:
+        if chat.message_type == "audio" and chat.audio_path:
+            try:
+                if os.path.exists(chat.audio_path):
+                    os.remove(chat.audio_path)
+            except Exception as e:
+                print(f"No se pudo eliminar el archivo de audio: {chat.audio_path}. Error: {e}")
+    # Eliminar los mensajes del historial
+    db.query(ChatHistory).filter(ChatHistory.user_id == current_user.id).delete()
+    db.commit()
+    # Limpiar la memoria en RAM (por usuario)
+    # Si tienes session_id, podrías limpiar por sesión, pero aquí limpiamos todo
+    return {"message": f"Historial del usuario {current_user.id} eliminado, incluyendo archivos de audio."}
 
 @router.get("/user-assessment-summary", response_model=UserAssessmentSummary)
 async def get_user_assessment_summary(
