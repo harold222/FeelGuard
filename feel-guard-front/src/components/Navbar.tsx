@@ -29,7 +29,10 @@ const Navbar: React.FC = () => {
           {isAuthenticated && (
             <>
               <Link to="/ai-chat" className="nav-link">
-                Interactuar
+                Chat IA
+              </Link>
+              <Link to="/dashboard" className="nav-link">
+                Dashboard
               </Link>
               <button className="nav-link nav-logout" onClick={handleLogout} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', font: 'inherit', padding: 0 }}>
                 Salir

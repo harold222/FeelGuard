@@ -124,11 +124,9 @@ const Formulario: React.FC = () => {
     setIsSubmitting(true);
     setSubmitMessage(null);
     try {
-      await simulateApiDelay(1500);
       const response = await formService.submitForm(formData);
       if (response.success) {
         setSubmitMessage({ type: 'success', text: response.message || 'Formulario enviado exitosamente!' });
-        setFormData({ email: '', nombre: '', edad: '', sexo: '' });
         setEmailExists(false);
         if (response.token) {
           localStorage.setItem('auth_token', response.token);

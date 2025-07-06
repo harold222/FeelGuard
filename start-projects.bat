@@ -1,9 +1,5 @@
 @echo off
 
-REM ===============================
-REM  Feel Guard - Iniciando Proyectos
-REM ===============================
-
 REM [0/3] Instalar dependencias Backend (Python)
 echo Instalando dependencias de Python (feel-guard-back/requirements.txt)...
 cd feel-guard-back
@@ -11,17 +7,12 @@ python -m venv venv
 call venv\Scripts\activate
 pip install --upgrade pip
 pip install -r requirements.txt
-pip install pydantic[email]
-pip install python-jose[cryptography]
-pip install passlib[bcrypt]==1.7.4
-pip install python-multipart
-pip install openai
 cd ..
 
 REM [1/3] Iniciando Backend (FastAPI)...
 echo Iniciando Backend (FastAPI)...
 cd feel-guard-back
-start "Feel Guard Backend" cmd /k "call venv\Scripts\activate && python run.py"
+start "Feel Guard Backend" cmd /k "call venv\Scripts\activate && python main.py"
 cd ..
 
 REM [2/3] Esperando 3 segundos para que el backend inicie...
@@ -41,6 +32,3 @@ echo.
 echo Backend:  http://localhost:8000
 echo Frontend: http://localhost:5173
 echo Docs API: http://localhost:8000/docs
-echo.
-echo Presiona cualquier tecla para cerrar...
-pause > nul 

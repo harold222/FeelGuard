@@ -24,6 +24,10 @@ export const API_CONFIG = {
       GET_BY_ID: '/api/users/{id}',
       UPDATE: '/api/users/{id}',
       DELETE: '/api/users/{id}',
+    },
+    REGISTRO: {
+      CREATE: '/registro',
+      GET_BY_EMAIL: '/registro/email/{email}',
     }
   }
 } as const;
