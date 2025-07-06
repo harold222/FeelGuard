@@ -27,16 +27,6 @@ const Home: React.FC = () => {
                   <p>Conversa con nuestra IA especializada en salud mental</p>
                 </div>
                 <div className="feature-card">
-                  <div className="feature-icon">🎤</div>
-                  <h3>Notas de Voz</h3>
-                  <p>Envía mensajes de voz y recibe respuestas inmediatas</p>
-                </div>
-                <div className="feature-card">
-                  <div className="feature-icon">📊</div>
-                  <h3>Evaluaciones</h3>
-                  <p>Análisis automático de estrés, ansiedad y bienestar</p>
-                </div>
-                <div className="feature-card">
                   <div className="feature-icon">📈</div>
                   <h3>Dashboard</h3>
                   <p>Seguimiento de tu progreso y recomendaciones personalizadas</p>
@@ -45,11 +35,6 @@ const Home: React.FC = () => {
                   <div className="feature-icon">🚨</div>
                   <h3>Detección de Crisis</h3>
                   <p>Identificación automática de situaciones de riesgo</p>
-                </div>
-                <div className="feature-card">
-                  <div className="feature-icon">🔒</div>
-                  <h3>Privacidad</h3>
-                  <p>Tus conversaciones están protegidas y son confidenciales</p>
                 </div>
               </div>
             </div>
