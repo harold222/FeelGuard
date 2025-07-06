@@ -68,7 +68,7 @@ async function interceptedFetch<T>(endpoint: string, options: RequestInit = {}):
 export const formService = {
   // Enviar datos del formulario
   async submitForm(formData: FormData): Promise<ApiResponse> {
-    const endpoint = '/registro';
+    const endpoint = API_CONFIG.ENDPOINTS.REGISTRO.CREATE;
     return interceptedFetch<ApiResponse>(endpoint, {
       method: 'POST',
       body: JSON.stringify({
@@ -91,8 +91,10 @@ export const formService = {
 
   // Consultar registro por email
   async getRegistroByEmail(email: string): Promise<{ id: number; email: string; nombre: string; edad: number; sexo: string; fecha_registro: string }> {
-    const endpoint = `/registro/email/${encodeURIComponent(email)}`;
-    return interceptedFetch<{ id: number; email: string; nombre: string; edad: number; sexo: string; fecha_registro: string }>(endpoint, { method: 'GET' });
+    const endpoint = API_CONFIG.ENDPOINTS.REGISTRO.GET_BY_EMAIL.replace('{email}', encodeURIComponent(email));
+    return interceptedFetch<{ id: number; email: string; nombre: string; edad: number; sexo: string; fecha_registro: string }>(endpoint, { 
+      method: 'GET' 
+    });
   }
 };
 

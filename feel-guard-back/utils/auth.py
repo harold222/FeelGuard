@@ -17,6 +17,8 @@ load_dotenv()
 # Configuración de seguridad
 SECRET_KEY = os.getenv("SECRET_KEY", "fafatdsagfdgfdhd21")
 ALGORITHM = "HS256"
+# Vigencia del token de acceso (en minutos)
+# 1440 minutos = 24 horas = 1 día completo
 ACCESS_TOKEN_EXPIRE_MINUTES = 1440
 
 # Contexto para hashing de contraseñas
@@ -40,7 +42,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     if expires_delta:
         expire = now + expires_delta
     else:
-        expire = now + timedelta(minutes=15)
+        expire = now + timedelta(days=1)
     to_encode.update({
         "exp": expire,
         "iat": now,
