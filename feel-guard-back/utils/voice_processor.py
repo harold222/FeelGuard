@@ -17,14 +17,13 @@ class VoiceProcessor:
                 content = await audio_file.read()
                 tmp.write(content)
                 tmp_path = tmp.name
-            
-            with open(tmp_path, "rb") as audio_file:
-                transcript = openai.Audio.transcribe(
-                    "whisper-1",
-                    audio_file,
-                    api_key=os.getenv("OPENAI_API_KEY")
+            with open(tmp_path, "rb") as audio_file_bin:
+                transcript = openai.audio.transcriptions.create(
+                    model="gpt-4o-mini-transcribe",
+                    file=audio_file_bin,
+                    response_format="text"
                 )
-            return transcript["text"]
+            return transcript
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error transcribing audio: {str(e)}")
 
