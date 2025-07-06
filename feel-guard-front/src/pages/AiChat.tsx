@@ -190,11 +190,11 @@ const AiChat: React.FC = () => {
             </div>
             <div className="chat-bubble gpt">
               <span>{item.response}</span>
-              {item.risk_level && (
+              {/* {item.risk_level && (
                 <div className="risk-indicator" style={{ backgroundColor: getRiskLevelColor(item.risk_level) }}>
                   Riesgo: {item.risk_level.toUpperCase()}
                 </div>
-              )}
+              )} */}
             </div>
             {item.assessment && (
               <div className="assessment-container">

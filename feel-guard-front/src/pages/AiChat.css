@@ -253,7 +253,7 @@
 }
 
 /* Indicador de riesgo en las burbujas */
-.risk-indicator {
+/* .risk-indicator {
   display: inline-block;
   color: white;
   padding: 2px 6px;
@@ -262,7 +262,7 @@
   font-weight: 600;
   margin-top: 8px;
   text-transform: uppercase;
-}
+} */
 
 /* Animaciones */
 @keyframes fadeIn {

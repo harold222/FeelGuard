@@ -17,16 +17,8 @@ class LangChainConfig:
             model=model_name,
             temperature=temperature,
             openai_api_key=self.openai_api_key,
-            max_tokens=150
+            max_tokens=200
         )
     
-    def get_completion_model(self, model_name: str = "gpt-3.5-turbo", temperature: float = 0) -> OpenAI:
-        """Obtiene un modelo de completación configurado"""
-        return OpenAI(
-            model=model_name,
-            temperature=temperature,
-            openai_api_key=self.openai_api_key
-        )
-
 # Instancia global de configuración
 langchain_config = LangChainConfig() 

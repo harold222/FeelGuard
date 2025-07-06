@@ -33,7 +33,7 @@ class SimpleMemory:
         if session_id not in conversation_memory:
             conversation_memory[session_id] = ConversationBufferMemory(
                 return_messages=True,
-                max_token_limit=5000  # Aproximadamente 30 mensajes
+                max_token_limit=6000  # Aproximadamente 30 mensajes
             )
         return conversation_memory[session_id]
     
