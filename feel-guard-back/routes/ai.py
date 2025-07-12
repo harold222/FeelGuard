@@ -14,6 +14,8 @@ from datetime import datetime
 import os
 from tempfile import NamedTemporaryFile
 import io
+from fastapi.responses import JSONResponse
+from utils.depression_image_classifier import image_classifier
 
 router = APIRouter()
 
@@ -53,6 +55,8 @@ class UserAssessmentSummary(BaseModel):
     recommendations: List[str]
 
 UPLOAD_DIR = "uploads"
+UPLOAD_IMAGE_DIR = "uploads/images"
+os.makedirs(UPLOAD_IMAGE_DIR, exist_ok=True)
 
 @router.post("/process-text", response_model=AIResponse)
 async def process_text_message(
@@ -162,6 +166,76 @@ async def process_voice_message(
         depression_classification=depression_classification
     )
 
+@router.post("/process-image")
+async def process_image(
+    image: UploadFile = File(...),
+    session_id: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: Registro = Depends(get_current_active_user)
+):
+    """
+    Procesa una imagen enviada por el usuario, la clasifica con el modelo de depresión y guarda el historial.
+    """
+    session_id = session_id or str(uuid.uuid4())
+    # Guardar la imagen en disco
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    ext = os.path.splitext(image.filename)[-1] or ".jpg"
+    image_filename = f"{session_id}_{timestamp}{ext}"
+    image_path = os.path.join(UPLOAD_IMAGE_DIR, image_filename)
+    content = await image.read()
+    with open(image_path, "wb") as f:
+        f.write(content)
+    # Clasificación con el modelo entrenado
+    result = image_classifier.classify(image_bytes=io.BytesIO(content))
+    # Determinar nivel de depresión
+    confidence = result["confidence"]
+    if result["is_depression"]:
+        if confidence >= 0.8:
+            level = "Alto"
+        elif confidence >= 0.6:
+            level = "Moderado"
+        else:
+            level = "Bajo"
+    else:
+        level = "Sin indicadores"
+    # Guardar historial en la base de datos (como texto, para mantener consistencia)
+    from models.chat_history import ChatHistory
+    chat_entry = ChatHistory(
+        user_id=current_user.id,
+        message=f"[Imagen] {image_filename}",
+        response=f"Clasificación: {result['label']} (Nivel: {level}, Confianza: {confidence:.2f})",
+        audio_path=image_path,  # Reutilizamos el campo para guardar la ruta de la imagen
+        message_type="image"
+    )
+    db.add(chat_entry)
+    db.commit()
+    db.refresh(chat_entry)
+    # Estructura de respuesta compatible con AIResponse
+    # Traducción de label
+    label_map = {"neutral": "Neutral", "depression": "Depresión"}
+    label_es = label_map.get(result["label"].lower(), result["label"].capitalize())
+    # Construir output
+    if result["label"].lower() == "neutral":
+        output = f"Clasificación: {label_es}"
+    else:
+        output = f"Clasificación: {label_es} (Nivel: {level}, Confianza: {confidence:.2f})"
+    depression_classification = {
+        "is_depression": result["is_depression"],
+        "confidence": result["confidence"],
+        "probability": [result["probabilities"]["neutral"], result["probabilities"]["depression"]],
+        "label": label_es,
+        "level": level
+    }
+    return {
+        "output": output,
+        "session_id": session_id,
+        "assessment": None,
+        "risk_level": level.lower() if result["is_depression"] else "low",
+        "depression_classification": depression_classification,
+        "image_path": f"/uploads/images/{image_filename}",
+        "history_id": chat_entry.id
+    }
+
 @router.get("/chat-history", response_model=List[ChatHistoryItem])
 async def get_chat_history(
     db: Session = Depends(get_db),
@@ -171,7 +245,39 @@ async def get_chat_history(
     Obtiene el historial completo de chat del usuario autenticado.
     """
     history = db.query(ChatHistory).filter(ChatHistory.user_id == current_user.id).order_by(ChatHistory.created_at.asc()).all()
-    return history
+    result = []
+    for chat in history:
+        item = {
+            "id": chat.id,
+            "message": chat.message,
+            "response": chat.response,
+            "created_at": chat.created_at,
+            "message_type": chat.message_type,
+            "image_path": ""
+        }
+        if chat.message_type == "audio" and chat.audio_path:
+            item["audio_path"] = chat.audio_path.replace("\\", "/") if chat.audio_path else None
+        elif chat.message_type == "image":
+            # Normalizar path y asegurar que sea absoluto
+            path = (chat.audio_path or "").replace("\\", "/")
+            if not path:
+                # Buscar el nombre del archivo en el mensaje tipo "[Imagen] nombre_archivo.jpg"
+                import re
+                match = re.search(r"\[Imagen\]\s*([^\s]+)", chat.message or "")
+                if match:
+                    filename = match.group(1)
+                    path = f"/uploads/images/{filename}"
+                else:
+                    path = ""
+            else:
+                # Si el path no comienza con /uploads/, normalizarlo
+                if path.startswith("uploads/"):
+                    path = "/" + path
+                else:
+                    path = "/uploads/images/" + path.split("/")[-1]
+            item["image_path"] = path or ""
+        result.append(item)
+    return result
 
 @router.delete("/clear-conversation")
 async def clear_conversation(
@@ -179,11 +285,11 @@ async def clear_conversation(
     current_user: Registro = Depends(get_current_active_user)
 ):
     """
-    Limpia todo el historial de conversación del usuario autenticado y elimina los archivos de audio asociados.
+    Limpia todo el historial de conversación del usuario autenticado y elimina los archivos de audio e imagen asociados.
     """
     # Buscar todos los mensajes del usuario
     history = db.query(ChatHistory).filter(ChatHistory.user_id == current_user.id).all()
-    # Eliminar archivos de audio si existen
+    # Eliminar archivos de audio e imagen si existen
     for chat in history:
         if chat.message_type == "audio" and chat.audio_path:
             try:
@@ -191,12 +297,17 @@ async def clear_conversation(
                     os.remove(chat.audio_path)
             except Exception as e:
                 print(f"No se pudo eliminar el archivo de audio: {chat.audio_path}. Error: {e}")
+        if chat.message_type == "image" and chat.audio_path:
+            try:
+                if os.path.exists(chat.audio_path):
+                    os.remove(chat.audio_path)
+            except Exception as e:
+                print(f"No se pudo eliminar el archivo de imagen: {chat.audio_path}. Error: {e}")
     # Eliminar los mensajes del historial
     db.query(ChatHistory).filter(ChatHistory.user_id == current_user.id).delete()
     db.commit()
     # Limpiar la memoria en RAM (por usuario)
-    # Si tienes session_id, podrías limpiar por sesión, pero aquí limpiamos todo
-    return {"message": f"Historial del usuario {current_user.id} eliminado, incluyendo archivos de audio."}
+    return {"message": f"Historial del usuario {current_user.id} eliminado, incluyendo archivos de audio e imagen."}
 
 @router.get("/user-assessment-summary", response_model=UserAssessmentSummary)
 async def get_user_assessment_summary(

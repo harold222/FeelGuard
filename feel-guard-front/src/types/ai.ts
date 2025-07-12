@@ -74,7 +74,8 @@ export interface ChatMessage {
   risk_level?: string;
   depression_classification?: DepressionClassification;
   audio_path?: string;
-  message_type?: 'text' | 'audio';
+  image_path?: string; // NUEVO para imágenes
+  message_type?: 'text' | 'audio' | 'image'; // NUEVO para imágenes
 }
 
 // Tipos para el dashboard

@@ -12,6 +12,6 @@ class ChatHistory(Base):
     response = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     audio_path = Column(String, nullable=True)  # Ruta o nombre del archivo de audio
-    message_type = Column(String, default="text")  # "text" o "audio"
+    message_type = Column(String, default="text")  # "text", "audio" o "image"
 
     user = relationship("Registro", backref="chat_history") 
