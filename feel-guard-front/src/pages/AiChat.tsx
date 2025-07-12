@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import type { ChatMessage, Assessment } from '../types/ai';
+import type { ChatMessage, Assessment, DepressionClassification } from '../types/ai';
 import { aiService } from '../services/ai.service';
 import './AiChat.css';
 import Modal from '../components/Modal';
@@ -37,34 +37,10 @@ const AiChat: React.FC = () => {
     }
   };
 
-  // Explicaciones amigables para categorías
-  const categoryDescriptions: Record<string, string> = {
-    // Depresión
-    estado_animo: 'Estado de ánimo bajo, tristeza o desesperanza',
-    interés: 'Falta de interés o motivación en actividades',
-    sueño: 'Problemas para dormir o cambios en el sueño',
-    apetito: 'Cambios en el apetito o el peso',
-    pensamientos: 'Pensamientos negativos, de inutilidad o muerte',
-    // Ansiedad
-    preocupación: 'Preocupación excesiva o miedo',
-    físicos: 'Síntomas físicos (palpitaciones, sudoración, etc.)',
-    cognitivos: 'Dificultad para concentrarse o pensamientos intrusivos',
-    conductuales: 'Cambios en el comportamiento o evitación',
-    // Estrés
-    emocionales: 'Irritabilidad, frustración o ansiedad',
-    // Bienestar
-    físico: 'Salud física y energía',
-    emocional: 'Bienestar emocional y autoestima',
-    social: 'Relaciones y apoyo social',
-    ocupacional: 'Satisfacción con trabajo o estudios',
-  };
-
   // Diccionarios de traducción
   const typeTranslations: Record<string, string> = {
-    stress: 'Estrés',
-    anxiety: 'Ansiedad',
     depression: 'Depresión',
-    crisis: 'Crisis',
+    neutral: 'Neutral',
   };
   const riskLevelTranslations: Record<string, string> = {
     low: 'Bajo',
@@ -79,10 +55,11 @@ const AiChat: React.FC = () => {
   };
 
   // Función para mostrar la evaluación
-  const renderAssessment = (assessment?: Assessment, msgId?: number) => {
+  const renderAssessment = (assessment?: Assessment, classification?: DepressionClassification, msgId?: number) => {
     if (!assessment) return null;
     if (!assessment.type || !assessment.risk_level) return null;
     const riskColor = getRiskLevelColor(assessment.risk_level);
+    
     // Render detalle específico
     const renderDetail = () => {
       if (assessment.depression_assessment) {
@@ -90,73 +67,23 @@ const AiChat: React.FC = () => {
         return (
           <div className="assessment-detail">
             <h4>Evaluación de Depresión</h4>
+            <p><strong>Nivel:</strong> {a.level}</p>
             <p><strong>Puntaje:</strong> {a.score}</p>
-            <ul>
-              {Object.entries(a.categories).map(([cat, val]) => val > 0 && (
-                <li key={cat}>
-                  <strong>{categoryDescriptions[cat] || cat}:</strong> {val} <span style={{color:'#F44336', fontWeight:'bold'}}>{val >= 2 ? ' (Afectación importante)' : ' (Afectación leve)'}</span>
-                </li>
-              ))}
-            </ul>
+            <p><strong>Es depresión:</strong> {a.is_depression ? 'Sí' : 'No'}</p>
+            <p><strong>Probabilidad neutro:</strong> {(a.probability_neutral * 100).toFixed(1)}%</p>
+            <p><strong>Probabilidad depresión:</strong> {(a.probability_depression * 100).toFixed(1)}%</p>
+            
             {a.score === 0 && <p style={{color:'#4CAF50'}}>No se detectaron síntomas relevantes de depresión en tu mensaje.</p>}
-            {a.score > 0 && <p style={{color:'#FF9800'}}>Se detectaron señales de depresión en las áreas resaltadas. Si estos síntomas persisten, considera hablar con un profesional.</p>}
-          </div>
-        );
-      }
-      if (assessment.anxiety_assessment) {
-        const a = assessment.anxiety_assessment;
-        return (
-          <div className="assessment-detail">
-            <h4>Evaluación de Ansiedad</h4>
-            <p><strong>Puntaje:</strong> {a.score}</p>
-            <ul>
-              {Object.entries(a.categories).map(([cat, val]) => val > 0 && (
-                <li key={cat}>
-                  <strong>{categoryDescriptions[cat] || cat}:</strong> {val} <span style={{color:'#F44336', fontWeight:'bold'}}>{val >= 2 ? ' (Afectación importante)' : ' (Afectación leve)'}</span>
-                </li>
-              ))}
-            </ul>
-            {a.score === 0 && <p style={{color:'#4CAF50'}}>No se detectaron síntomas relevantes de ansiedad en tu mensaje.</p>}
-            {a.score > 0 && <p style={{color:'#FF9800'}}>Se detectaron señales de ansiedad en las áreas resaltadas. Si estos síntomas persisten o interfieren con tu vida diaria, considera buscar apoyo profesional.</p>}
-          </div>
-        );
-      }
-      if (assessment.stress_assessment) {
-        const a = assessment.stress_assessment;
-        return (
-          <div className="assessment-detail">
-            <h4>Evaluación de Estrés</h4>
-            <p><strong>Puntaje:</strong> {a.score}</p>
-            <ul>
-              {Object.entries(a.categories).map(([cat, val]) => val > 0 && (
-                <li key={cat}>
-                  <strong>{categoryDescriptions[cat] || cat}:</strong> {val} <span style={{color:'#F44336', fontWeight:'bold'}}>{val >= 2 ? ' (Afectación importante)' : ' (Afectación leve)'}</span>
-                </li>
-              ))}
-            </ul>
-            {a.score === 0 && <p style={{color:'#4CAF50'}}>No se detectaron síntomas relevantes de estrés en tu mensaje.</p>}
-            {a.score > 0 && <p style={{color:'#FF9800'}}>Se detectaron señales de estrés en las áreas resaltadas. Si el estrés es persistente, prueba técnicas de relajación o busca apoyo.</p>}
-          </div>
-        );
-      }
-      if (assessment.crisis_indicators) {
-        const c = assessment.crisis_indicators;
-        return (
-          <div className="assessment-detail crisis-detail" style={{border:'2px solid #F44336', background:'#fff3f3', borderRadius:'8px', padding:'12px', marginTop:'8px'}}>
-            <h4 style={{color:'#F44336'}}>⚠️ Crisis detectada</h4>
-            <ul style={{marginBottom:'8px'}}>
-              {c.suicidal_ideation && <li><strong>Ideación suicida:</strong> Se detectaron frases relacionadas con pensamientos suicidas.</li>}
-              {c.self_harm && <li><strong>Autolesión:</strong> Se detectaron frases relacionadas con autolesiones.</li>}
-              {c.panic_attack && <li><strong>Ataque de pánico:</strong> Se detectaron síntomas de pánico o dificultad para respirar.</li>}
-            </ul>
-            <p style={{color:'#F44336', fontWeight:'bold'}}>Por favor, busca ayuda profesional o llama a los servicios de emergencia. Tu seguridad es lo más importante.</p>
+            {a.score > 0 && <p style={{color:'#FF9800'}}>Se detectaron señales de depresión. Si estos síntomas persisten, considera hablar con un profesional.</p>}
           </div>
         );
       }
       return null;
     };
+    
     const typeLabel = typeTranslations[assessment.type] || assessment.type;
     const riskLabel = riskLevelTranslations[assessment.risk_level] || assessment.risk_level;
+    
     return (
       <div className="assessment-card" style={{ borderLeft: `4px solid ${riskColor}` }}>
         <div className="assessment-header">
@@ -200,7 +127,8 @@ const AiChat: React.FC = () => {
         response: res.output,
         created_at: new Date().toISOString(),
         assessment: res.assessment,
-        risk_level: res.risk_level
+        risk_level: res.risk_level,
+        depression_classification: res.depression_classification
       };
       
       setHistory(h => [...h, newMessage]);
@@ -259,6 +187,7 @@ const AiChat: React.FC = () => {
         created_at: new Date().toISOString(),
         assessment: res.assessment,
         risk_level: res.risk_level,
+        depression_classification: res.depression_classification,
         audio_path: audioUrl, // Usar la URL local para previsualización inmediata
         message_type: 'audio'
       };
@@ -327,15 +256,10 @@ const AiChat: React.FC = () => {
             </div>
             <div className="chat-bubble gpt">
               <span>{item.response}</span>
-              {/* {item.risk_level && (
-                <div className="risk-indicator" style={{ backgroundColor: getRiskLevelColor(item.risk_level) }}>
-                  Riesgo: {item.risk_level.toUpperCase()}
-                </div>
-              )} */}
             </div>
             {item.assessment && (
               <div className="assessment-container">
-                {renderAssessment(item.assessment, item.id)}
+                {renderAssessment(item.assessment, item.depression_classification, item.id)}
               </div>
             )}
           </div>

@@ -1,57 +1,29 @@
 // Tipos para las evaluaciones de salud mental
 export interface Assessment {
   session_id: string;
-  type: 'stress' | 'anxiety' | 'depression' | 'crisis';
+  type: 'depression' | 'neutral';
   risk_level: 'low' | 'moderate' | 'high' | 'critical';
   timestamp: string;
   text_sample: string;
-  stress_assessment?: StressAssessment;
-  anxiety_assessment?: AnxietyAssessment;
   depression_assessment?: DepressionAssessment;
-  crisis_indicators?: CrisisIndicators;
-}
-
-export interface StressAssessment {
-  level: 'Bajo' | 'Moderado' | 'Alto';
-  score: number;
-  categories: {
-    físicos: number;
-    emocionales: number;
-    cognitivos: number;
-    conductuales: number;
-  };
-  timestamp: string;
-}
-
-export interface AnxietyAssessment {
-  level: 'Bajo' | 'Moderado' | 'Alto';
-  score: number;
-  categories: {
-    preocupación: number;
-    físicos: number;
-    cognitivos: number;
-    conductuales: number;
-  };
-  timestamp: string;
 }
 
 export interface DepressionAssessment {
   level: 'Bajo' | 'Moderado' | 'Alto';
   score: number;
-  categories: {
-    estado_animo: number;
-    interés: number;
-    sueño: number;
-    apetito: number;
-    pensamientos: number;
-  };
+  is_depression: boolean;
+  probability_neutral: number;
+  probability_depression: number;
   timestamp: string;
 }
 
-export interface CrisisIndicators {
-  suicidal_ideation: boolean;
-  self_harm: boolean;
-  panic_attack: boolean;
+// Nueva interfaz para la clasificación del modelo
+export interface DepressionClassification {
+  is_depression: boolean;
+  confidence: number;
+  probability: [number, number]; // [neutral, depression]
+  processed_text?: string;
+  error?: string;
 }
 
 // Tipos para las respuestas de la API
@@ -60,6 +32,7 @@ export interface AIResponse {
   session_id: string;
   assessment?: Assessment;
   risk_level?: string;
+  depression_classification?: DepressionClassification;
 }
 
 export interface ChatHistoryItem {
@@ -67,6 +40,8 @@ export interface ChatHistoryItem {
   message: string;
   response: string;
   created_at: string;
+  audio_path?: string;
+  message_type?: 'text' | 'audio';
 }
 
 export interface UserAssessmentSummary {
@@ -81,10 +56,8 @@ export interface UserAssessmentSummary {
     critical: number;
   };
   assessment_types_summary: {
-    stress: number;
-    anxiety: number;
     depression: number;
-    crisis: number;
+    neutral: number;
   };
   average_risk_score: number;
   most_common_concern: string;
@@ -99,6 +72,7 @@ export interface ChatMessage {
   created_at: string;
   assessment?: Assessment;
   risk_level?: string;
+  depression_classification?: DepressionClassification;
   audio_path?: string;
   message_type?: 'text' | 'audio';
 }

@@ -16,6 +16,7 @@ from langchain.prompts import (
 from .langchain_config import langchain_config
 from .mental_health_prompts import mental_health_prompts
 from .mental_health_assessment import mental_health_assessment, AssessmentType
+from .depression_classifier import depression_classifier
 import re
 
 load_dotenv()
@@ -90,46 +91,25 @@ class AIAgent:
         return any(keyword in text_lower for keyword in self.crisis_keywords)
     
     def determine_assessment_type(self, text: str) -> AssessmentType:
-        """Determina el tipo de evaluación basado en el contenido del texto"""
-        text_lower = text.lower()
+        """Determina el tipo de evaluación basado en el modelo de clasificación"""
+        # Usar el modelo de clasificación de depresión
+        classification_result = depression_classifier.classify_text(text)
         
-        # Detectar crisis primero (prioridad máxima)
-        if self.detect_crisis(text):
-            return AssessmentType.CRISIS
-        
-        # Detectar patrones específicos
-        if any(word in text_lower for word in ["estrés", "estresado", "estresada", "tenso", "tensa", "presión"]):
-            return AssessmentType.STRESS
-        
-        if any(word in text_lower for word in ["ansiedad", "ansioso", "ansiosa", "preocupado", "preocupada", "pánico"]):
-            return AssessmentType.ANXIETY
-        
-        if any(word in text_lower for word in [
-            "depresión", "deprimido", "deprimida", "triste", "sin esperanza", "vacío", "problema",
-            "abrumado", "abrumada", "no encuentro salida", "no tengo ganas", "no tengo fuerzas", "no puedo más", "no puedo mas", "me siento vacío", "me siento vacio", "me siento solo", "me siento sola", "me siento sin esperanza", "me siento sin salida", "me siento destruido", "me siento destruida", "me siento fatal", "me siento sin valor", "me siento sin sentido", "me siento sin futuro", "me siento sin ganas de vivir",
-            "nunca podré", "no puedo lograr", "no tengo futuro", "no tengo posibilidades", "por mi pobreza", "por mi situación", "no merezco", "no valgo", "no soy suficiente", "no tengo oportunidad", "no tengo suerte", "no tengo recursos", "no tengo salida", "no tengo opción", "no tengo alternativa", "no tengo motivación", "no tengo ilusión", "no tengo sueños", "no tengo metas", "no tengo propósito"
-        ]):
+        if classification_result.get('is_depression', False):
             return AssessmentType.DEPRESSION
-        
-        # Por defecto, si no coincide con ningún patrón, retornar None
-        return None
+        else:
+            return AssessmentType.NEUTRAL
     
     def get_appropriate_prompt(self, text: str, conversation_history: List[str]) -> str:
         """Determina el prompt más apropiado basado en el contenido del mensaje"""
-        text_lower = text.lower()
-        
         # Detectar crisis primero (prioridad máxima)
         if self.detect_crisis(text):
             return mental_health_prompts.get_crisis_intervention_prompt()
         
-        # Detectar patrones específicos
-        if any(word in text_lower for word in ["estrés", "estresado", "estresada", "tenso", "tensa", "presión"]):
-            return mental_health_prompts.get_stress_assessment_prompt()
+        # Usar el modelo de clasificación para determinar el tipo
+        assessment_type = self.determine_assessment_type(text)
         
-        if any(word in text_lower for word in ["ansiedad", "ansioso", "ansiosa", "preocupado", "preocupada", "pánico"]):
-            return mental_health_prompts.get_anxiety_assessment_prompt()
-        
-        if any(word in text_lower for word in ["depresión", "deprimido", "deprimida", "triste", "sin esperanza", "vacío", "problema"]):
+        if assessment_type == AssessmentType.DEPRESSION:
             return mental_health_prompts.get_depression_assessment_prompt()
         
         # Si es una conversación continua, usar prompt de seguimiento
@@ -156,7 +136,7 @@ class AIAgent:
                 neutral_message_counts[session_id] = 0
                 return "¡Hola! 😊 ¿Cómo te encuentras hoy? Si quieres, cuéntame cómo te has sentido últimamente."
             
-            # Determinar el tipo de evaluación
+            # Determinar el tipo de evaluación usando el modelo
             assessment_type = self.determine_assessment_type(text)
             
             # Crear evaluación estructurada
@@ -166,12 +146,12 @@ class AIAgent:
                 assessment_type=assessment_type
             )
 
-            # Si se detecta sentimiento/emoción, reiniciar contador
-            if assessment_type is not None and assessment.get("type", "") != "":
+            # Si se detecta depresión, reiniciar contador
+            if assessment_type == AssessmentType.DEPRESSION:
                 neutral_message_counts[session_id] = 0
             
-            # Si NO se detecta sentimiento/emoción relevante:
-            if assessment_type is None or assessment.get("type", "") == "":
+            # Si NO se detecta depresión (es neutro):
+            if assessment_type == AssessmentType.NEUTRAL:
                 count += 1
                 neutral_message_counts[session_id] = count
 
@@ -217,12 +197,10 @@ class AIAgent:
                 ⚠️ **RECURSOS DE EMERGENCIA** ⚠️
                 
                 Si estás en crisis o tienes pensamientos suicidas:
-                - Línea Nacional de Prevención del Suicidio (EE.UU.): 988
-                - Crisis Text Line: Envía "HOME" al 741741
                 - Servicios de emergencia: 911
                 - Habla con alguien de confianza inmediatamente
                 
-                Tu vida es valiosa. Por favor, busca ayuda profesional inmediata."""
+                Tu vida es valiosa. Por favor, busca ayuda profesional de inmediato."""
                 response += emergency_resources
             
             return response.strip()
