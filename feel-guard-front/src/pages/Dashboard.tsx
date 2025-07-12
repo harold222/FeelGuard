@@ -29,21 +29,18 @@ const Dashboard: React.FC = () => {
 
   const getRiskLevelColor = (level: string) => {
     switch (level.toLowerCase()) {
-      case 'Bajo': return '#4CAF50';
-      case 'Moderado': return '#FF9800';
-      case 'Alto': return '#F44336';
-      case 'Critico': return '#9C27B0';
+      case 'low': return '#4CAF50';
+      case 'moderate': return '#FF9800';
+      case 'high': return '#F44336';
+      case 'critical': return '#9C27B0';
       default: return '#9E9E9E';
     }
   };
 
   const getAssessmentTypeColor = (type: string) => {
     switch (type) {
-      case 'Estrés': return '#FF5722';
-      case 'Ansiedad': return '#FF9800';
-      case 'Depresión': return '#2196F3';
-      case 'Bienestar': return '#4CAF50';
-      case 'Crisis': return '#F44336';
+      case 'depression': return '#2196F3';
+      case 'neutral': return '#4CAF50';
       default: return '#9E9E9E';
     }
   };
@@ -146,7 +143,7 @@ const Dashboard: React.FC = () => {
                     className="assessment-dot" 
                     style={{ backgroundColor: getAssessmentTypeColor(type) }}
                   ></span>
-                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                  {type === 'depression' ? 'Depresión' : type === 'neutral' ? 'Neutral' : type.charAt(0).toUpperCase() + type.slice(1)}
                 </div>
                 <div className="assessment-count">{count}</div>
               </div>

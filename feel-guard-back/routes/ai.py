@@ -26,6 +26,7 @@ class AIResponse(BaseModel):
     session_id: str
     assessment: Optional[Dict] = None
     risk_level: Optional[str] = None
+    depression_classification: Optional[Dict] = None
 
 class ChatHistoryItem(BaseModel):
     id: int
@@ -76,6 +77,10 @@ async def process_text_message(
         assessment_type=assessment_type
     )
     
+    # Obtener clasificación del modelo de depresión
+    from utils.depression_classifier import depression_classifier
+    depression_classification = depression_classifier.classify_text(request.text)
+    
     # Guardar historial en la base de datos
     chat_entry = ChatHistory(
         user_id=current_user.id,
@@ -89,11 +94,13 @@ async def process_text_message(
     # Validar que risk_level esté presente
     if "risk_level" not in assessment:
         raise HTTPException(status_code=500, detail="No se pudo determinar el nivel de riesgo")
+    
     return AIResponse(
         output=response, 
         session_id=session_id,
         assessment=assessment,
-        risk_level=assessment["risk_level"]
+        risk_level=assessment["risk_level"],
+        depression_classification=depression_classification
     )
 
 @router.post("/process-voice", response_model=AIResponse)
@@ -138,14 +145,21 @@ async def process_voice_message(
         text=transcribed_text,
         assessment_type=assessment_type
     )
+    
+    # Obtener clasificación del modelo de depresión
+    from utils.depression_classifier import depression_classifier
+    depression_classification = depression_classifier.classify_text(transcribed_text)
+    
     # Validar que risk_level esté presente
     if "risk_level" not in assessment:
         raise HTTPException(status_code=500, detail="No se pudo determinar el nivel de riesgo")
+    
     return AIResponse(
         output=response, 
         session_id=session_id,
         assessment=assessment,
-        risk_level=assessment["risk_level"]
+        risk_level=assessment["risk_level"],
+        depression_classification=depression_classification
     )
 
 @router.get("/chat-history", response_model=List[ChatHistoryItem])
@@ -271,12 +285,6 @@ async def get_user_assessment_summary(
             recommendations.append("Practica técnicas de relajación y autocuidado regularmente")
         else:
             recommendations.append("Excelente progreso. Continúa con las estrategias que te están funcionando")
-        
-        if assessment_types_summary.get("stress", 0) > len(assessments) * 0.4:
-            recommendations.append("Considera técnicas de manejo del estrés como meditación o ejercicio")
-        
-        if assessment_types_summary.get("anxiety", 0) > len(assessments) * 0.3:
-            recommendations.append("Practica ejercicios de respiración y mindfulness para la ansiedad")
         
         if assessment_types_summary.get("depression", 0) > len(assessments) * 0.2:
             recommendations.append("Es importante buscar apoyo profesional para evaluar tu estado de ánimo")
