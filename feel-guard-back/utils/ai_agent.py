@@ -197,7 +197,7 @@ class AIAgent:
                 ⚠️ **RECURSOS DE EMERGENCIA** ⚠️
                 
                 Si estás en crisis o tienes pensamientos suicidas:
-                - Servicios de emergencia: 911
+                - Servicios de emergencia: 123
                 - Habla con alguien de confianza inmediatamente
                 
                 Tu vida es valiosa. Por favor, busca ayuda profesional de inmediato."""

@@ -74,7 +74,6 @@ const AiChat: React.FC = () => {
             <h4>Evaluación de Depresión</h4>
             <p><strong>Nivel:</strong> {a.level}</p>
             <p><strong>Puntaje:</strong> {a.score}</p>
-            <p><strong>Es depresión:</strong> {a.is_depression ? 'Sí' : 'No'}</p>
             <p><strong>Probabilidad neutro:</strong> {(a.probability_neutral * 100).toFixed(1)}%</p>
             <p><strong>Probabilidad depresión:</strong> {(a.probability_depression * 100).toFixed(1)}%</p>
             
@@ -158,7 +157,6 @@ const AiChat: React.FC = () => {
               <h4>Evaluación de Depresión</h4>
               <p><strong>Nivel:</strong> {level}</p>
               <p><strong>Puntaje:</strong> {classification.confidence}</p>
-              <p><strong>Es depresión:</strong> {classification.is_depression ? 'Sí' : 'No'}</p>
               <p><strong>Probabilidad neutro:</strong> {(classification.probability[0] * 100).toFixed(1)}%</p>
               <p><strong>Probabilidad depresión:</strong> {(classification.probability[1] * 100).toFixed(1)}%</p>
               {classification.confidence === 0 && <p style={{color:'#4CAF50'}}>No se detectaron síntomas relevantes de depresión en la imagen.</p>}

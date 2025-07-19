@@ -50,10 +50,10 @@ export interface UserAssessmentSummary {
   total_assessments: number;
   period_days: number;
   risk_levels_summary: {
-    low: number;
-    moderate: number;
-    high: number;
-    critical: number;
+    bajo: number;
+    moderado: number;
+    alto: number;
+    critico: number;
   };
   assessment_types_summary: {
     depression: number;

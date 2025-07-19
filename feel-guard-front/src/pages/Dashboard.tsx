@@ -169,16 +169,8 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Preocupación más común */}
-        <div className="dashboard-card">
-          <h3>Preocupación Más Común</h3>
-          <div className="common-concern">
-            <span className="concern-text">{summary.most_common_concern}</span>
-          </div>
-        </div>
-
         {/* Recomendaciones */}
-        <div className="dashboard-card recommendations-card">
+        <div className="dashboard-card ">
           <h3>Recomendaciones</h3>
           <div className="recommendations-list">
             {summary.recommendations.map((rec, index) => (
