@@ -81,7 +81,7 @@
 
 /* Resumen general */
 .summary-card {
-  grid-column: span 2;
+  grid-column: span 3;
 }
 
 .summary-stats {
@@ -262,7 +262,7 @@
 
 /* Recomendaciones */
 .recommendations-card {
-  grid-column: span 2;
+  grid-column: span 3;
 }
 
 .recommendations-list {

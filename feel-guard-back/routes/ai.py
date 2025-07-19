@@ -387,21 +387,97 @@ async def get_user_assessment_summary(
         # Determinar preocupación más común
         most_common_concern = max(assessment_types_summary.items(), key=lambda x: x[1])[0] if assessment_types_summary else "Sin datos"
         
-        # Generar recomendaciones basadas en los datos
+        # Generar recomendaciones detalladas y personalizadas
         recommendations = []
         
-        if average_risk_score > 2.5:
-            recommendations.append("Considera buscar ayuda profesional para evaluar tu situación")
-        elif average_risk_score > 1.5:
-            recommendations.append("Practica técnicas de relajación y autocuidado regularmente")
+        # 1. Recomendaciones basadas en el puntaje promedio de riesgo
+        if average_risk_score >= 3.5:
+            recommendations.extend([
+                "🚨 **URGENTE**: Considera contactar inmediatamente a un profesional de salud mental",
+                "💡 Practica técnicas de respiración profunda cuando sientas ansiedad",
+                "📞 Mantén contacto regular con amigos y familiares",
+                "🏥 Considera buscar ayuda en servicios de crisis si es necesario"
+            ])
+        elif average_risk_score >= 2.5:
+            recommendations.extend([
+                "⚠️ **IMPORTANTE**: Busca ayuda profesional para evaluar tu situación",
+                "🧘‍♀️ Practica meditación diaria por al menos 10 minutos",
+                "📝 Mantén un diario de emociones para identificar patrones"
+            ])
+        elif average_risk_score >= 1.5:
+            recommendations.extend([
+                "💪 **PROGRESO**: Continúa con las estrategias que te están funcionando",
+                "🌅 Establece una rutina matutina saludable",
+                "🎯 Practica técnicas de mindfulness durante el día",
+                "📚 Lee sobre bienestar emocional y autocuidado"
+            ])
         else:
-            recommendations.append("Excelente progreso. Continúa con las estrategias que te están funcionando")
+            recommendations.extend([
+                "🌟 **EXCELENTE**: Tu bienestar emocional está en buen estado",
+                "✨ Mantén las prácticas positivas que has desarrollado",
+                "🤝 Ayuda a otros que puedan estar pasando por dificultades",
+                "📈 Continúa monitoreando tu estado de ánimo regularmente"
+            ])
         
-        if assessment_types_summary.get("depression", 0) > len(assessments) * 0.2:
-            recommendations.append("Es importante buscar apoyo profesional para evaluar tu estado de ánimo")
+        # 2. Recomendaciones basadas en el tipo de evaluación más común
+        depression_count = assessment_types_summary.get("depression", 0)
+        neutral_count = assessment_types_summary.get("neutral", 0)
+        total_assessments = len(assessments)
         
-        if len(assessments) < 5:
-            recommendations.append("Mantén conversaciones regulares para un mejor seguimiento")
+        if depression_count > total_assessments * 0.4:
+            recommendations.extend([
+                "🌞 Expón tu piel a la luz solar por 15-20 minutos diarios",
+                "😴 Establece una rutina de sueño consistente (7-9 horas)"
+            ])
+        elif depression_count > total_assessments * 0.2:
+            recommendations.extend([
+                "🤔 **SEÑALES**: Presta atención a cambios en tu estado de ánimo",
+                "🎨 Practica actividades creativas para expresar emociones",
+                "🌿 Considera técnicas de aromaterapia con aceites esenciales",
+                "📱 Limita el uso de redes sociales si afectan tu ánimo"
+            ])
+        
+        # 3. Recomendaciones basadas en la frecuencia de uso
+        if len(assessments) < 3:
+            recommendations.extend([
+                "📊 **SEGUIMIENTO**: Mantén conversaciones regulares para mejor monitoreo",
+                "📱 Usa la app al menos 3 veces por semana para seguimiento"
+            ])
+        elif len(assessments) > 20:
+            recommendations.extend([
+                "📈 **COMPROMISO**: Excelente dedicación al seguimiento de tu salud mental",
+                "📊 Revisa tu progreso semanalmente para identificar tendencias"
+            ])
+        
+        # 4. Recomendaciones basadas en la distribución de niveles de riesgo
+        high_critical_count = risk_levels_summary.get("high", 0) + risk_levels_summary.get("critical", 0)
+        if high_critical_count > total_assessments * 0.3:
+            recommendations.extend([
+                "📞 Ten a mano números de emergencia y líneas de crisis",
+                "👥 Busca grupos de apoyo para personas con experiencias similares"
+            ])
+        
+        # 5. Recomendaciones basadas en la tendencia temporal (si hay suficientes datos)
+        if len(assessments) >= 5:
+            recent_assessments = assessments[:5]  # Últimos 5
+            recent_risk_levels = [a.get("risk_level", "") for a in recent_assessments if a.get("risk_level")]
+            recent_avg = sum(risk_scores.get(level, 0) for level in recent_risk_levels) / len(recent_risk_levels) if recent_risk_levels else 0
+            
+            if recent_avg < average_risk_score * 0.8:
+                recommendations.extend([
+                    "📈 **MEJORANDO**: ¡Excelente progreso! Tu estado de ánimo está mejorando",
+                    "🎉 Celebra tus pequeños logros diarios",
+                    "🔄 Mantén las estrategias que están funcionando"
+                ])
+            elif recent_avg > average_risk_score * 1.2:
+                recommendations.extend([
+                    "📉 **ATENCIÓN**: Tu estado de ánimo parece estar empeorando",
+                    "🔍 Identifica qué factores pueden estar contribuyendo",
+                    "🤝 Busca apoyo adicional de profesionales o seres queridos"
+                ])
+        
+        # Limitar a máximo 15 recomendaciones para no abrumar
+        recommendations = recommendations[:10]
         
         return UserAssessmentSummary(
             user_id=current_user.id,

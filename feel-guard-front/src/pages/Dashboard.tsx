@@ -163,14 +163,11 @@ const Dashboard: React.FC = () => {
             >
               <span className="score-value">{summary.average_risk_score.toFixed(1)}</span>
             </div>
-            <p className="score-description">
-              Puntuación promedio en escala de 0-1
-            </p>
           </div>
         </div>
 
         {/* Recomendaciones */}
-        <div className="dashboard-card ">
+        <div className="dashboard-card recommendations-card">
           <h3>Recomendaciones</h3>
           <div className="recommendations-list">
             {summary.recommendations.map((rec, index) => (
