@@ -29,6 +29,11 @@ const Dashboard: React.FC = () => {
 
   const getRiskLevelColor = (level: string) => {
     switch (level.toLowerCase()) {
+      case 'bajo': return '#4CAF50';
+      case 'moderado': return '#FF9800';
+      case 'alto': return '#F44336';
+      case 'crítico': return '#9C27B0';
+      // Mantener compatibilidad con inglés por si acaso
       case 'low': return '#4CAF50';
       case 'moderate': return '#FF9800';
       case 'high': return '#F44336';
@@ -115,7 +120,7 @@ const Dashboard: React.FC = () => {
                     className="risk-dot" 
                     style={{ backgroundColor: getRiskLevelColor(level) }}
                   ></span>
-                  {level.toUpperCase()}
+                  {level.charAt(0).toUpperCase() + level.slice(1)}
                 </div>
                 <div className="risk-progress">
                   <div 

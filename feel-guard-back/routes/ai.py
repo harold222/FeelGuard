@@ -471,7 +471,6 @@ async def get_user_assessment_summary(
                 ])
             elif recent_avg > average_risk_score * 1.2:
                 recommendations.extend([
-                    "📉 **ATENCIÓN**: Tu estado de ánimo parece estar empeorando",
                     "🔍 Identifica qué factores pueden estar contribuyendo",
                     "🤝 Busca apoyo adicional de profesionales o seres queridos"
                 ])
@@ -479,12 +478,25 @@ async def get_user_assessment_summary(
         # Limitar a máximo 15 recomendaciones para no abrumar
         recommendations = recommendations[:10]
         
+        # Traducir las claves del risk_levels_summary a español
+        risk_levels_summary_es = {}
+        risk_level_translation = {
+            "low": "bajo",
+            "moderate": "moderado", 
+            "high": "alto",
+            "critical": "crítico"
+        }
+        
+        for level_en, count in risk_levels_summary.items():
+            level_es = risk_level_translation.get(level_en, level_en)
+            risk_levels_summary_es[level_es] = count
+        
         return UserAssessmentSummary(
             user_id=current_user.id,
             total_conversations=len(chat_history),
             total_assessments=len(assessments),
             period_days=days,
-            risk_levels_summary=risk_levels_summary,
+            risk_levels_summary=risk_levels_summary_es,
             assessment_types_summary=assessment_types_summary,
             average_risk_score=round(average_risk_score, 2),
             most_common_concern=most_common_concern,
