@@ -12,9 +12,9 @@ services:
     environment:
       - HOST=0.0.0.0
       - PORT=8000
-      - DATABASE_URL=postgresql://postgres.pksyqsewzhyjxhntojow:Roci12345.@aws-0-us-east-2.pooler.supabase.com:6543/postgres
-      - SECRET_KEY=feelGuardProyectoTest
-      - OPENAI_API_KEY=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
+      - DATABASE_URL=
+      - SECRET_KEY=
+      - OPENAI_API_KEY=
     volumes:
       - ./feel-guard-back/uploads:/app/uploads
     depends_on:
