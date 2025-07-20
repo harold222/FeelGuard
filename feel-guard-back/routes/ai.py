@@ -14,6 +14,8 @@ from datetime import datetime
 import os
 from tempfile import NamedTemporaryFile
 import io
+from fastapi.responses import JSONResponse
+from utils.depression_image_classifier import image_classifier
 
 router = APIRouter()
 
@@ -53,6 +55,8 @@ class UserAssessmentSummary(BaseModel):
     recommendations: List[str]
 
 UPLOAD_DIR = "uploads"
+UPLOAD_IMAGE_DIR = "uploads/images"
+os.makedirs(UPLOAD_IMAGE_DIR, exist_ok=True)
 
 @router.post("/process-text", response_model=AIResponse)
 async def process_text_message(
@@ -162,6 +166,76 @@ async def process_voice_message(
         depression_classification=depression_classification
     )
 
+@router.post("/process-image")
+async def process_image(
+    image: UploadFile = File(...),
+    session_id: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: Registro = Depends(get_current_active_user)
+):
+    """
+    Procesa una imagen enviada por el usuario, la clasifica con el modelo de depresión y guarda el historial.
+    """
+    session_id = session_id or str(uuid.uuid4())
+    # Guardar la imagen en disco
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    ext = os.path.splitext(image.filename)[-1] or ".jpg"
+    image_filename = f"{session_id}_{timestamp}{ext}"
+    image_path = os.path.join(UPLOAD_IMAGE_DIR, image_filename)
+    content = await image.read()
+    with open(image_path, "wb") as f:
+        f.write(content)
+    # Clasificación con el modelo entrenado
+    result = image_classifier.classify(image_bytes=io.BytesIO(content))
+    # Determinar nivel de depresión
+    confidence = result["confidence"]
+    if result["is_depression"]:
+        if confidence >= 0.8:
+            level = "Alto"
+        elif confidence >= 0.6:
+            level = "Moderado"
+        else:
+            level = "Bajo"
+    else:
+        level = "Sin indicadores"
+    # Guardar historial en la base de datos (como texto, para mantener consistencia)
+    from models.chat_history import ChatHistory
+    chat_entry = ChatHistory(
+        user_id=current_user.id,
+        message=f"[Imagen] {image_filename}",
+        response=f"Clasificación: {result['label']} (Nivel: {level}, Confianza: {confidence:.2f})",
+        audio_path=image_path,  # Reutilizamos el campo para guardar la ruta de la imagen
+        message_type="image"
+    )
+    db.add(chat_entry)
+    db.commit()
+    db.refresh(chat_entry)
+    # Estructura de respuesta compatible con AIResponse
+    # Traducción de label
+    label_map = {"neutral": "Neutral", "depression": "Depresión"}
+    label_es = label_map.get(result["label"].lower(), result["label"].capitalize())
+    # Construir output
+    if result["label"].lower() == "neutral":
+        output = f"Clasificación: {label_es}"
+    else:
+        output = f"Clasificación: {label_es} (Nivel: {level}, Confianza: {confidence:.2f})"
+    depression_classification = {
+        "is_depression": result["is_depression"],
+        "confidence": result["confidence"],
+        "probability": [result["probabilities"]["neutral"], result["probabilities"]["depression"]],
+        "label": label_es,
+        "level": level
+    }
+    return {
+        "output": output,
+        "session_id": session_id,
+        "assessment": None,
+        "risk_level": level.lower() if result["is_depression"] else "low",
+        "depression_classification": depression_classification,
+        "image_path": f"/uploads/images/{image_filename}",
+        "history_id": chat_entry.id
+    }
+
 @router.get("/chat-history", response_model=List[ChatHistoryItem])
 async def get_chat_history(
     db: Session = Depends(get_db),
@@ -171,7 +245,39 @@ async def get_chat_history(
     Obtiene el historial completo de chat del usuario autenticado.
     """
     history = db.query(ChatHistory).filter(ChatHistory.user_id == current_user.id).order_by(ChatHistory.created_at.asc()).all()
-    return history
+    result = []
+    for chat in history:
+        item = {
+            "id": chat.id,
+            "message": chat.message,
+            "response": chat.response,
+            "created_at": chat.created_at,
+            "message_type": chat.message_type,
+            "image_path": ""
+        }
+        if chat.message_type == "audio" and chat.audio_path:
+            item["audio_path"] = chat.audio_path.replace("\\", "/") if chat.audio_path else None
+        elif chat.message_type == "image":
+            # Normalizar path y asegurar que sea absoluto
+            path = (chat.audio_path or "").replace("\\", "/")
+            if not path:
+                # Buscar el nombre del archivo en el mensaje tipo "[Imagen] nombre_archivo.jpg"
+                import re
+                match = re.search(r"\[Imagen\]\s*([^\s]+)", chat.message or "")
+                if match:
+                    filename = match.group(1)
+                    path = f"/uploads/images/{filename}"
+                else:
+                    path = ""
+            else:
+                # Si el path no comienza con /uploads/, normalizarlo
+                if path.startswith("uploads/"):
+                    path = "/" + path
+                else:
+                    path = "/uploads/images/" + path.split("/")[-1]
+            item["image_path"] = path or ""
+        result.append(item)
+    return result
 
 @router.delete("/clear-conversation")
 async def clear_conversation(
@@ -179,11 +285,11 @@ async def clear_conversation(
     current_user: Registro = Depends(get_current_active_user)
 ):
     """
-    Limpia todo el historial de conversación del usuario autenticado y elimina los archivos de audio asociados.
+    Limpia todo el historial de conversación del usuario autenticado y elimina los archivos de audio e imagen asociados.
     """
     # Buscar todos los mensajes del usuario
     history = db.query(ChatHistory).filter(ChatHistory.user_id == current_user.id).all()
-    # Eliminar archivos de audio si existen
+    # Eliminar archivos de audio e imagen si existen
     for chat in history:
         if chat.message_type == "audio" and chat.audio_path:
             try:
@@ -191,12 +297,17 @@ async def clear_conversation(
                     os.remove(chat.audio_path)
             except Exception as e:
                 print(f"No se pudo eliminar el archivo de audio: {chat.audio_path}. Error: {e}")
+        if chat.message_type == "image" and chat.audio_path:
+            try:
+                if os.path.exists(chat.audio_path):
+                    os.remove(chat.audio_path)
+            except Exception as e:
+                print(f"No se pudo eliminar el archivo de imagen: {chat.audio_path}. Error: {e}")
     # Eliminar los mensajes del historial
     db.query(ChatHistory).filter(ChatHistory.user_id == current_user.id).delete()
     db.commit()
     # Limpiar la memoria en RAM (por usuario)
-    # Si tienes session_id, podrías limpiar por sesión, pero aquí limpiamos todo
-    return {"message": f"Historial del usuario {current_user.id} eliminado, incluyendo archivos de audio."}
+    return {"message": f"Historial del usuario {current_user.id} eliminado, incluyendo archivos de audio e imagen."}
 
 @router.get("/user-assessment-summary", response_model=UserAssessmentSummary)
 async def get_user_assessment_summary(
@@ -276,28 +387,116 @@ async def get_user_assessment_summary(
         # Determinar preocupación más común
         most_common_concern = max(assessment_types_summary.items(), key=lambda x: x[1])[0] if assessment_types_summary else "Sin datos"
         
-        # Generar recomendaciones basadas en los datos
+        # Generar recomendaciones detalladas y personalizadas
         recommendations = []
         
-        if average_risk_score > 2.5:
-            recommendations.append("Considera buscar ayuda profesional para evaluar tu situación")
-        elif average_risk_score > 1.5:
-            recommendations.append("Practica técnicas de relajación y autocuidado regularmente")
+        # 1. Recomendaciones basadas en el puntaje promedio de riesgo
+        if average_risk_score >= 3.5:
+            recommendations.extend([
+                "🚨 **URGENTE**: Considera contactar inmediatamente a un profesional de salud mental",
+                "💡 Practica técnicas de respiración profunda cuando sientas ansiedad",
+                "📞 Mantén contacto regular con amigos y familiares",
+                "🏥 Considera buscar ayuda en servicios de crisis si es necesario"
+            ])
+        elif average_risk_score >= 2.5:
+            recommendations.extend([
+                "⚠️ **IMPORTANTE**: Busca ayuda profesional para evaluar tu situación",
+                "🧘‍♀️ Practica meditación diaria por al menos 10 minutos",
+                "📝 Mantén un diario de emociones para identificar patrones"
+            ])
+        elif average_risk_score >= 1.5:
+            recommendations.extend([
+                "💪 **PROGRESO**: Continúa con las estrategias que te están funcionando",
+                "🌅 Establece una rutina matutina saludable",
+                "🎯 Practica técnicas de mindfulness durante el día",
+                "📚 Lee sobre bienestar emocional y autocuidado"
+            ])
         else:
-            recommendations.append("Excelente progreso. Continúa con las estrategias que te están funcionando")
+            recommendations.extend([
+                "🌟 **EXCELENTE**: Tu bienestar emocional está en buen estado",
+                "✨ Mantén las prácticas positivas que has desarrollado",
+                "🤝 Ayuda a otros que puedan estar pasando por dificultades",
+                "📈 Continúa monitoreando tu estado de ánimo regularmente"
+            ])
         
-        if assessment_types_summary.get("depression", 0) > len(assessments) * 0.2:
-            recommendations.append("Es importante buscar apoyo profesional para evaluar tu estado de ánimo")
+        # 2. Recomendaciones basadas en el tipo de evaluación más común
+        depression_count = assessment_types_summary.get("depression", 0)
+        neutral_count = assessment_types_summary.get("neutral", 0)
+        total_assessments = len(assessments)
         
-        if len(assessments) < 5:
-            recommendations.append("Mantén conversaciones regulares para un mejor seguimiento")
+        if depression_count > total_assessments * 0.4:
+            recommendations.extend([
+                "🌞 Expón tu piel a la luz solar por 15-20 minutos diarios",
+                "😴 Establece una rutina de sueño consistente (7-9 horas)"
+            ])
+        elif depression_count > total_assessments * 0.2:
+            recommendations.extend([
+                "🤔 **SEÑALES**: Presta atención a cambios en tu estado de ánimo",
+                "🎨 Practica actividades creativas para expresar emociones",
+                "🌿 Considera técnicas de aromaterapia con aceites esenciales",
+                "📱 Limita el uso de redes sociales si afectan tu ánimo"
+            ])
+        
+        # 3. Recomendaciones basadas en la frecuencia de uso
+        if len(assessments) < 3:
+            recommendations.extend([
+                "📊 **SEGUIMIENTO**: Mantén conversaciones regulares para mejor monitoreo",
+                "📱 Usa la app al menos 3 veces por semana para seguimiento"
+            ])
+        elif len(assessments) > 20:
+            recommendations.extend([
+                "📈 **COMPROMISO**: Excelente dedicación al seguimiento de tu salud mental",
+                "📊 Revisa tu progreso semanalmente para identificar tendencias"
+            ])
+        
+        # 4. Recomendaciones basadas en la distribución de niveles de riesgo
+        high_critical_count = risk_levels_summary.get("high", 0) + risk_levels_summary.get("critical", 0)
+        if high_critical_count > total_assessments * 0.3:
+            recommendations.extend([
+                "📞 Ten a mano números de emergencia y líneas de crisis",
+                "👥 Busca grupos de apoyo para personas con experiencias similares"
+            ])
+        
+        # 5. Recomendaciones basadas en la tendencia temporal (si hay suficientes datos)
+        if len(assessments) >= 5:
+            recent_assessments = assessments[:5]  # Últimos 5
+            recent_risk_levels = [a.get("risk_level", "") for a in recent_assessments if a.get("risk_level")]
+            recent_avg = sum(risk_scores.get(level, 0) for level in recent_risk_levels) / len(recent_risk_levels) if recent_risk_levels else 0
+            
+            if recent_avg < average_risk_score * 0.8:
+                recommendations.extend([
+                    "📈 **MEJORANDO**: ¡Excelente progreso! Tu estado de ánimo está mejorando",
+                    "🎉 Celebra tus pequeños logros diarios",
+                    "🔄 Mantén las estrategias que están funcionando"
+                ])
+            elif recent_avg > average_risk_score * 1.2:
+                recommendations.extend([
+                    "🔍 Identifica qué factores pueden estar contribuyendo",
+                    "🤝 Busca apoyo adicional de profesionales o seres queridos"
+                ])
+        
+        # Limitar a máximo 15 recomendaciones para no abrumar
+        recommendations = recommendations[:10]
+        
+        # Traducir las claves del risk_levels_summary a español
+        risk_levels_summary_es = {}
+        risk_level_translation = {
+            "low": "bajo",
+            "moderate": "moderado", 
+            "high": "alto",
+            "critical": "crítico"
+        }
+        
+        for level_en, count in risk_levels_summary.items():
+            level_es = risk_level_translation.get(level_en, level_en)
+            risk_levels_summary_es[level_es] = count
         
         return UserAssessmentSummary(
             user_id=current_user.id,
             total_conversations=len(chat_history),
             total_assessments=len(assessments),
             period_days=days,
-            risk_levels_summary=risk_levels_summary,
+            risk_levels_summary=risk_levels_summary_es,
             assessment_types_summary=assessment_types_summary,
             average_risk_score=round(average_risk_score, 2),
             most_common_concern=most_common_concern,

@@ -3,6 +3,7 @@ import type { ChatMessage, Assessment, DepressionClassification } from '../types
 import { aiService } from '../services/ai.service';
 import './AiChat.css';
 import Modal from '../components/Modal';
+import CameraCapture from '../components/CameraCapture';
 
 const AiChat: React.FC = () => {
   const [input, setInput] = useState('');
@@ -17,6 +18,10 @@ const AiChat: React.FC = () => {
   const chatEndRef = useRef<HTMLDivElement | null>(null);
   const [showClearModal, setShowClearModal] = useState(false);
   const [expandedDetails, setExpandedDetails] = useState<{[id: number]: boolean}>({});
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
 
   useEffect(() => {
     aiService.getChatHistoryWithAssessments().then(setHistory).catch(() => setHistory([]));
@@ -69,7 +74,6 @@ const AiChat: React.FC = () => {
             <h4>Evaluación de Depresión</h4>
             <p><strong>Nivel:</strong> {a.level}</p>
             <p><strong>Puntaje:</strong> {a.score}</p>
-            <p><strong>Es depresión:</strong> {a.is_depression ? 'Sí' : 'No'}</p>
             <p><strong>Probabilidad neutro:</strong> {(a.probability_neutral * 100).toFixed(1)}%</p>
             <p><strong>Probabilidad depresión:</strong> {(a.probability_depression * 100).toFixed(1)}%</p>
             
@@ -107,6 +111,59 @@ const AiChat: React.FC = () => {
           </button>
         )}
         {typeof msgId === 'number' && expandedDetails[msgId] && renderDetail()}
+      </div>
+    );
+  };
+
+  // Nueva función para renderizar evaluación de imagen
+  const renderImageAssessment = (classification?: DepressionClassification, msgId?: number) => {
+    if (!classification) return null;
+    // Solo mostrar si es depresión
+    if (!classification.is_depression) return null;
+    // Determinar nivel y colores
+    let level = 'Sin indicadores';
+    let riskColor = '#4CAF50';
+    if (classification.is_depression) {
+      if (classification.confidence >= 0.8) {
+        level = 'Alto';
+        riskColor = '#F44336';
+      } else if (classification.confidence >= 0.6) {
+        level = 'Moderado';
+        riskColor = '#FF9800';
+      } else {
+        level = 'Bajo';
+        riskColor = '#2196F3';
+      }
+    }
+    return (
+      <div className="assessment-card" style={{ borderLeft: `4px solid ${riskColor}` }}>
+        <div className="assessment-header">
+          <span className="assessment-type">DEPRESIÓN</span>
+          <span className="risk-level" style={{ backgroundColor: riskColor }}>{level.toUpperCase()}</span>
+        </div>
+        <div className="assessment-details">
+          <p><strong>Evaluación:</strong> Depresión</p>
+          <p><strong>Nivel de riesgo:</strong> {level}</p>
+          {typeof msgId === 'number' && (
+            <button
+              className="toggle-details-btn"
+              onClick={() => toggleDetails(msgId)}
+              style={{margin:'8px 0', padding:'4px 12px', borderRadius:'6px', background:'#169ccf', color:'#fff', border:'none', cursor:'pointer'}}>
+              {expandedDetails[msgId] ? 'Ocultar detalles' : 'Más detalles'}
+            </button>
+          )}
+          {typeof msgId === 'number' && expandedDetails[msgId] && (
+            <div className="assessment-detail">
+              <h4>Evaluación de Depresión</h4>
+              <p><strong>Nivel:</strong> {level}</p>
+              <p><strong>Puntaje:</strong> {classification.confidence}</p>
+              <p><strong>Probabilidad neutro:</strong> {(classification.probability[0] * 100).toFixed(1)}%</p>
+              <p><strong>Probabilidad depresión:</strong> {(classification.probability[1] * 100).toFixed(1)}%</p>
+              {classification.confidence === 0 && <p style={{color:'#4CAF50'}}>No se detectaron síntomas relevantes de depresión en la imagen.</p>}
+              {classification.confidence > 0 && <p style={{color:'#FF9800'}}>Se detectaron señales de depresión. Si estos síntomas persisten, considera hablar con un profesional.</p>}
+            </div>
+          )}
+        </div>
       </div>
     );
   };
@@ -218,6 +275,64 @@ const AiChat: React.FC = () => {
     }
   };
 
+  // Manejar selección de imagen
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedImage(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+  // Enviar imagen al backend
+  const handleSendImage = async () => {
+    if (!selectedImage) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await aiService.processImage(selectedImage, sessionId || undefined);
+      setSessionId(res.session_id);
+      const newMessage: ChatMessage = {
+        id: Date.now(),
+        message: '',
+        response: res.output,
+        created_at: new Date().toISOString(),
+        assessment: res.assessment,
+        risk_level: res.risk_level,
+        depression_classification: res.depression_classification,
+        image_path: imagePreview || '',
+        message_type: 'image',
+      };
+      setHistory(h => [...h, newMessage]);
+      setSelectedImage(null);
+      setImagePreview(null);
+    } catch (err: unknown) {
+      if (err instanceof Error) setError(err.message);
+      else setError('Error inesperado');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Abrir modal de selección de imagen
+  const handleOpenImageModal = () => setShowImageModal(true);
+  const handleCloseImageModal = () => setShowImageModal(false);
+  // Elegir cámara
+  const handleSelectCamera = () => {
+    setShowCamera(true);
+    setShowImageModal(false);
+  };
+  // Elegir archivos
+  const handleSelectFile = () => {
+    document.getElementById('image-upload')?.click();
+    setShowImageModal(false);
+  };
+  // Recibir imagen de la cámara
+  const handleCapture = (file: File, previewUrl: string) => {
+    setSelectedImage(file);
+    setImagePreview(previewUrl);
+    setShowCamera(false);
+  };
+
   return (
     <div className="chat-container">
       <div className="chat-header">
@@ -237,7 +352,17 @@ const AiChat: React.FC = () => {
         {history.map((item, idx) => (
           <div key={item.id + '-' + idx} className="chat-bubble-group">
             <div className="chat-bubble user">
-              {item.message_type === 'audio' && item.audio_path ? (
+              {item.message_type === 'image' && item.image_path ? (
+                <img
+                  src={item.image_path.startsWith('blob:')
+                    ? item.image_path
+                    : item.image_path.startsWith('http')
+                      ? item.image_path
+                      : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/${item.image_path.replace(/^\/+/, '')}`}
+                  alt="Imagen enviada"
+                  style={{ maxWidth: 200, borderRadius: 8 }}
+                />
+              ) : item.message_type === 'audio' && item.audio_path ? (
                 <audio
                   src={item.audio_path.startsWith('blob:')
                     ? item.audio_path
@@ -260,6 +385,11 @@ const AiChat: React.FC = () => {
             {item.assessment && (
               <div className="assessment-container">
                 {renderAssessment(item.assessment, item.depression_classification, item.id)}
+              </div>
+            )}
+            {!item.assessment && item.message_type === 'image' && item.depression_classification && (
+              <div className="assessment-container">
+                {renderImageAssessment(item.depression_classification, item.id)}
               </div>
             )}
           </div>
@@ -296,13 +426,54 @@ const AiChat: React.FC = () => {
         >
           <span role="img" aria-label="Audio">🎤</span>
         </button>
+        <input
+          type="file"
+          accept="image/*"
+          style={{ display: 'none' }}
+          id="image-upload"
+          onChange={handleImageChange}
+        />
+        <button type="button" className="audio-btn" title="Enviar imagen" onClick={handleOpenImageModal}>
+          <span role="img" aria-label="Imagen">🖼️</span>
+        </button>
       </form>
+      {showImageModal && (
+        <Modal
+          open={showImageModal}
+          onClose={handleCloseImageModal}
+          title="Enviar imagen"
+          confirmText=""
+          cancelText="Cancelar"
+        >
+          <div style={{display:'flex', flexDirection:'column', gap:16}}>
+            <button className="send-audio-btn" onClick={handleSelectCamera} style={{marginBottom:8}}>Tomar foto con cámara</button>
+            <button className="send-audio-btn" onClick={handleSelectFile}>Seleccionar desde archivos</button>
+          </div>
+        </Modal>
+      )}
+      {showCamera && (
+        <CameraCapture
+          onCapture={handleCapture}
+          onCancel={() => setShowCamera(false)}
+        />
+      )}
       
       {audioUrl && (
         <div className="audio-preview">
           <audio src={audioUrl} controls style={{ width: '100%' }} />
           <button onClick={handleSendAudio} className="send-audio-btn" disabled={loading}>
             <span role="img" aria-label="Enviar audio">Enviar audio</span>
+          </button>
+        </div>
+      )}
+      {imagePreview && (
+        <div className="audio-preview">
+          <img src={imagePreview} alt="Previsualización" style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 8 }} />
+          <button onClick={handleSendImage} className="send-audio-btn" disabled={loading}>
+            <span role="img" aria-label="Enviar imagen">Enviar imagen</span>
+          </button>
+          <button onClick={() => { setSelectedImage(null); setImagePreview(null); }} className="send-audio-btn" style={{ background: '#f44336', marginLeft: 8 }}>
+            Cancelar
           </button>
         </div>
       )}

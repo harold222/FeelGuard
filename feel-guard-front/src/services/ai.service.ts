@@ -43,6 +43,25 @@ export const aiService = {
     return response.json();
   },
 
+  async processImage(imageFile: File, sessionId?: string): Promise<AIResponse> {
+    const token = localStorage.getItem('auth_token');
+    const formData = new FormData();
+    formData.append('image', imageFile);
+    if (sessionId) formData.append('session_id', sessionId);
+
+    const response = await fetch(`${API_BASE}/api/ai/process-image`, {
+      method: 'POST',
+      headers: {
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      },
+      body: formData,
+    });
+    if (!response.ok) {
+      throw new Error('Error al procesar la imagen');
+    }
+    return response.json();
+  },
+
   async getChatHistory(): Promise<ChatHistoryItem[]> {
     const token = localStorage.getItem('auth_token');
     const response = await fetch(`${API_BASE}/api/ai/chat-history`, {

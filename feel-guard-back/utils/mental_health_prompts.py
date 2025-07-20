@@ -106,7 +106,7 @@ URGENTE: Si detectas signos de crisis, sigue estos pasos:
 5. **Proporciona recursos de emergencia**
 
 ## Recursos de Emergencia:
-- Servicios de emergencia locales: 911
+- Servicios de emergencia locales: 123
 - Importancia de buscar ayuda profesional INMEDIATA
 
 ## Respuesta Esperada:
