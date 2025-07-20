@@ -22,6 +22,8 @@ const AiChat: React.FC = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [showImageModal, setShowImageModal] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
+  const [validatingDepression, setValidatingDepression] = useState<{[id: number]: boolean}>({});
+  const [validationResults, setValidationResults] = useState<{[id: number]: {success: boolean; message: string; esp32_response?: unknown}}>({});
 
   useEffect(() => {
     aiService.getChatHistoryWithAssessments().then(setHistory).catch(() => setHistory([]));
@@ -60,7 +62,7 @@ const AiChat: React.FC = () => {
   };
 
   // Función para mostrar la evaluación
-  const renderAssessment = (assessment?: Assessment, classification?: DepressionClassification, msgId?: number) => {
+  const renderAssessment = (assessment?: Assessment, _classification?: DepressionClassification, msgId?: number) => {
     if (!assessment) return null;
     if (!assessment.type || !assessment.risk_level) return null;
     const riskColor = getRiskLevelColor(assessment.risk_level);
@@ -101,15 +103,77 @@ const AiChat: React.FC = () => {
           <p><strong>Nivel de riesgo:</strong> {riskLabel}</p>
           <p><strong>Fecha:</strong> {new Date(assessment.timestamp).toLocaleString()}</p>
         </div>
-        {typeof msgId === 'number' && (
-          <button
-            className="toggle-details-btn"
-            onClick={() => toggleDetails(msgId)}
-            style={{margin:'8px 0', padding:'4px 12px', borderRadius:'6px', background:'#169ccf', color:'#fff', border:'none', cursor:'pointer'}}
-          >
-            {expandedDetails[msgId] ? 'Ocultar detalles' : 'Más detalles'}
-          </button>
+        
+        {/* Botón de validación con ESP32 - solo mostrar si es depresión */}
+        {assessment.type === 'depression' && typeof msgId === 'number' && (
+          <div style={{marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap'}}>
+            <button
+              className="toggle-details-btn"
+              onClick={() => toggleDetails(msgId)}
+              style={{padding:'6px 12px', borderRadius:'6px', background:'#169ccf', color:'#fff', border:'none', cursor:'pointer'}}
+            >
+              {expandedDetails[msgId] ? 'Ocultar detalles' : 'Más detalles'}
+            </button>
+            
+            <button
+              onClick={() => {
+                const depressionData = {
+                  probability: Math.round(assessment.depression_assessment?.probability_depression || 0 * 100),
+                  level: assessment.depression_assessment?.level || 'Bajo',
+                  confidence: assessment.depression_assessment?.score || 0,
+                  type: 'text' as const
+                };
+                if (msgId !== undefined) {
+                  handleValidateDepression(msgId, depressionData);
+                }
+              }}
+              disabled={msgId !== undefined && validatingDepression[msgId]}
+              style={{
+                padding:'6px 12px', 
+                borderRadius:'6px', 
+                background: (msgId !== undefined && validatingDepression[msgId]) ? '#ccc' : '#ff6b35', 
+                color:'#fff', 
+                border:'none', 
+                cursor: (msgId !== undefined && validatingDepression[msgId]) ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4
+              }}
+            >
+              {(msgId !== undefined && validatingDepression[msgId]) ? (
+                <>
+                  <span style={{fontSize: '12px'}}>⏳</span>
+                  Validando...
+                </>
+              ) : (
+                <>
+                  <span style={{fontSize: '12px'}}>🔬</span>
+                  Validar con Sensores
+                </>
+              )}
+            </button>
+          </div>
         )}
+        
+        {/* Mostrar resultado de validación */}
+        {msgId !== undefined && validationResults[msgId] && (
+          <div style={{
+            marginTop: 8,
+            padding: 8,
+            borderRadius: 6,
+            background: validationResults[msgId]?.success ? '#e8f5e8' : '#ffe8e8',
+            border: `1px solid ${validationResults[msgId]?.success ? '#4caf50' : '#f44336'}`,
+            fontSize: '0.9rem'
+          }}>
+            <strong>{validationResults[msgId]?.success ? '✅' : '❌'} Sensores Físicos:</strong> {validationResults[msgId]?.message}
+            {validationResults[msgId]?.success && (
+              <div style={{marginTop: 4, fontSize: '0.8rem', color: '#666'}}>
+                <strong>Datos del sensor:</strong> {JSON.stringify(validationResults[msgId]?.esp32_response || {}, null, 2)}
+              </div>
+            )}
+          </div>
+        )}
+        
         {typeof msgId === 'number' && expandedDetails[msgId] && renderDetail()}
       </div>
     );
@@ -144,14 +208,71 @@ const AiChat: React.FC = () => {
         <div className="assessment-details">
           <p><strong>Evaluación:</strong> Depresión</p>
           <p><strong>Nivel de riesgo:</strong> {level}</p>
+          
+          {/* Botón de validación con ESP32 para imágenes */}
           {typeof msgId === 'number' && (
-            <button
-              className="toggle-details-btn"
-              onClick={() => toggleDetails(msgId)}
-              style={{margin:'8px 0', padding:'4px 12px', borderRadius:'6px', background:'#169ccf', color:'#fff', border:'none', cursor:'pointer'}}>
-              {expandedDetails[msgId] ? 'Ocultar detalles' : 'Más detalles'}
-            </button>
+            <div style={{marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap'}}>
+              <button
+                className="toggle-details-btn"
+                onClick={() => toggleDetails(msgId)}
+                style={{padding:'6px 12px', borderRadius:'6px', background:'#169ccf', color:'#fff', border:'none', cursor:'pointer'}}>
+                {expandedDetails[msgId] ? 'Ocultar detalles' : 'Más detalles'}
+              </button>
+              
+              <button
+                onClick={() => {
+                  const depressionData = {
+                    probability: Math.round(classification.probability[1] * 100), // Probabilidad de depresión
+                    level: level,
+                    confidence: classification.confidence,
+                    type: 'image' as const
+                  };
+                  if (msgId !== undefined) {
+                    handleValidateDepression(msgId, depressionData);
+                  }
+                }}
+                disabled={msgId !== undefined && validatingDepression[msgId]}
+                style={{
+                  padding:'6px 12px', 
+                  borderRadius:'6px', 
+                  background: (msgId !== undefined && validatingDepression[msgId]) ? '#ccc' : '#ff6b35', 
+                  color:'#fff', 
+                  border:'none', 
+                  cursor: (msgId !== undefined && validatingDepression[msgId]) ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4
+                }}
+              >
+                {(msgId !== undefined && validatingDepression[msgId]) ? (
+                  <>
+                    <span style={{fontSize: '12px'}}>⏳</span>
+                    Validando...
+                  </>
+                ) : (
+                                  <>
+                  <span style={{fontSize: '12px'}}>🔬</span>
+                  Validar con Sensores
+                </>
+                )}
+              </button>
+            </div>
           )}
+          
+          {/* Mostrar resultado de validación para imágenes */}
+          {msgId !== undefined && validationResults[msgId] && (
+            <div style={{
+              marginTop: 8,
+              padding: 8,
+              borderRadius: 6,
+              background: validationResults[msgId]?.success ? '#e8f5e8' : '#ffe8e8',
+              border: `1px solid ${validationResults[msgId]?.success ? '#4caf50' : '#f44336'}`,
+              fontSize: '0.9rem'
+            }}>
+              <strong>{validationResults[msgId]?.success ? '✅' : '❌'} ESP32:</strong> {validationResults[msgId]?.message}
+            </div>
+          )}
+          
           {typeof msgId === 'number' && expandedDetails[msgId] && (
             <div className="assessment-detail">
               <h4>Evaluación de Depresión</h4>
@@ -333,6 +454,41 @@ const AiChat: React.FC = () => {
     setShowCamera(false);
   };
 
+  // Validar depresión con ESP32
+  const handleValidateDepression = async (msgId: number, depressionData: {
+    probability: number;
+    level: string;
+    confidence: number;
+    type: 'text' | 'voice' | 'image';
+  }) => {
+    setValidatingDepression(prev => ({ ...prev, [msgId]: true }));
+    setError(null);
+    
+    try {
+      const result = await aiService.validateDepressionWithESP32(depressionData);
+      setValidationResults(prev => ({ 
+        ...prev, 
+        [msgId]: { 
+          success: result.success, 
+          message: result.message,
+          esp32_response: result.esp32_response
+        } 
+      }));
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al validar con ESP32';
+      setValidationResults(prev => ({ 
+        ...prev, 
+        [msgId]: { 
+          success: false, 
+          message: errorMessage,
+          esp32_response: undefined
+        } 
+      }));
+    } finally {
+      setValidatingDepression(prev => ({ ...prev, [msgId]: false }));
+    }
+  };
+
   return (
     <div className="chat-container">
       <div className="chat-header">
@@ -358,7 +514,7 @@ const AiChat: React.FC = () => {
                     ? item.image_path
                     : item.image_path.startsWith('http')
                       ? item.image_path
-                      : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/${item.image_path.replace(/^\/+/, '')}`}
+                      : `${'https://feel-guard-backend-v1-0-0.onrender.com'}/${item.image_path.replace(/^\/+/, '')}`}
                   alt="Imagen enviada"
                   style={{ maxWidth: 200, borderRadius: 8 }}
                 />
@@ -368,7 +524,7 @@ const AiChat: React.FC = () => {
                     ? item.audio_path
                     : item.audio_path.startsWith('http')
                       ? item.audio_path
-                      : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/${item.audio_path.replace(/^\/+/, '')}`}
+                      : `${'https://feel-guard-backend-v1-0-0.onrender.com'}/${item.audio_path.replace(/^\/+/, '')}`}
                   controls
                   style={{ width: '100%' }}
                 />

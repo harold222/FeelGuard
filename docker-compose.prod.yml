@@ -1,11 +1,8 @@
 version: '3.8'
 
 services:
-  # Backend - FastAPI
+  # Backend - FastAPI (desde Docker Hub)
   backend:
-    build:
-      context: ./feel-guard-back
-      dockerfile: Dockerfile
     image: 2harold2/feel-guard-backend:v1.0.0
     container_name: feel-guard-backend
     ports:
@@ -13,9 +10,9 @@ services:
     environment:
       - HOST=0.0.0.0
       - PORT=8000
-      - DATABASE_URL=postgresql://postgres.pksyqsewzhyjxhntojow:Roci12345.@aws-0-us-east-2.pooler.supabase.com:6543/postgres
-      - SECRET_KEY=feelGuardProyectoTest
-      - OPENAI_API_KEY=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
+      - DATABASE_URL=postgresql://user:password@postgres:5432/feelguard
+      - SECRET_KEY=your-secret-key-here
+      - OPENAI_API_KEY=your-openai-api-key-here
     volumes:
       - ./feel-guard-back/uploads:/app/uploads
     depends_on:
@@ -24,19 +21,14 @@ services:
       - feel-guard-network
     restart: unless-stopped
 
-  # Frontend - React
+  # Frontend - React (desde Docker Hub)
   frontend:
-    build:
-      context: ./feel-guard-front
-      dockerfile: Dockerfile
-      args:
-        VITE_API_BASE_URL: https://feel-guard-backend-v1-0-0.onrender.com
     image: 2harold2/feel-guard-frontend:v1.0.0
     container_name: feel-guard-frontend
     ports:
       - "80:80"
     environment:
-      - VITE_API_BASE_URL=https://feel-guard-backend-v1-0-0.onrender.com/
+      - VITE_API_BASE_URL=http://localhost:8000
     depends_on:
       - backend
     networks:

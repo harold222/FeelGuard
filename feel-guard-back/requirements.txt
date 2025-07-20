@@ -19,3 +19,5 @@ numpy>=1.21.0
 scikit-learn>=1.0.0
 nltk>=3.6.0
 Pillow>=10.0.0
+httpx>=0.25.0
+paho-mqtt==1.5.0

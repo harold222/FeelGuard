@@ -16,6 +16,12 @@ from tempfile import NamedTemporaryFile
 import io
 from fastapi.responses import JSONResponse
 from utils.depression_image_classifier import image_classifier
+import httpx
+import paho.mqtt.client as mqtt
+import json
+import asyncio
+import threading
+import time
 
 router = APIRouter()
 
@@ -53,6 +59,103 @@ class UserAssessmentSummary(BaseModel):
     average_risk_score: float
     most_common_concern: str
     recommendations: List[str]
+
+class ESP32ValidationRequest(BaseModel):
+    probability: float
+    level: str
+    confidence: float
+    type: str
+
+class MQTTClient:
+    def __init__(self):
+        try:
+            # Intentar con la nueva API primero
+            self.client = mqtt.Client("FeelGuard-Backend", callback_api_version=mqtt.CallbackAPIVersion.VERSION1)
+        except (TypeError, AttributeError):
+            # Fallback a la API antigua
+            self.client = mqtt.Client("FeelGuard-Backend")
+        
+        self.client.on_connect = self.on_connect
+        self.client.on_message = self.on_message
+        self.client.on_disconnect = self.on_disconnect
+        self.connected = False
+        self.last_message = None
+        self.message_received = threading.Event()
+        
+    def on_connect(self, client, userdata, flags, rc):
+        print(f"Conectado a MQTT con código: {rc}")
+        self.connected = True
+        # Suscribirse al topic para recibir datos del sensor
+        client.subscribe("wokwi/depresion/bpm")
+        
+    def on_message(self, client, userdata, msg):
+        print(f"Mensaje recibido en {msg.topic}: {msg.payload}")
+        try:
+            self.last_message = json.loads(msg.payload.decode())
+            self.message_received.set()
+        except Exception as e:
+            print(f"Error al procesar mensaje MQTT: {e}")
+            
+    def on_disconnect(self, client, userdata, rc):
+        print(f"Desconectado de MQTT con código: {rc}")
+        self.connected = False
+        
+    def connect(self):
+        try:
+            self.client.connect("test.mosquitto.org", 1883, 60)
+            self.client.loop_start()
+            # Esperar a que se conecte
+            timeout = 10
+            start_time = time.time()
+            while not self.connected and (time.time() - start_time) < timeout:
+                time.sleep(0.1)
+            return self.connected
+        except Exception as e:
+            print(f"Error conectando a MQTT: {e}")
+            return False
+            
+    def disconnect(self):
+        self.client.loop_stop()
+        self.client.disconnect()
+        
+    def publish(self, topic, message):
+        if self.connected:
+            self.client.publish(topic, message)
+            return True
+        return False
+        
+    def wait_for_response(self, timeout=30):
+        """Espera por una respuesta del sensor"""
+        if self.message_received.wait(timeout):
+            message = self.last_message
+            self.message_received.clear()
+            self.last_message = None
+            return message
+        return None
+
+# Instancia global del cliente MQTT
+mqtt_client = MQTTClient()
+
+# Inicializar conexión MQTT al arrancar
+@router.on_event("startup")
+async def startup_event():
+    """Inicializar conexión MQTT al arrancar la aplicación"""
+    try:
+        if mqtt_client.connect():
+            print("✅ Conexión MQTT establecida exitosamente")
+        else:
+            print("❌ No se pudo establecer conexión MQTT")
+    except Exception as e:
+        print(f"❌ Error al conectar MQTT: {e}")
+
+@router.on_event("shutdown")
+async def shutdown_event():
+    """Cerrar conexión MQTT al apagar la aplicación"""
+    try:
+        mqtt_client.disconnect()
+        print("✅ Conexión MQTT cerrada")
+    except Exception as e:
+        print(f"❌ Error al cerrar MQTT: {e}")
 
 UPLOAD_DIR = "uploads"
 UPLOAD_IMAGE_DIR = "uploads/images"
@@ -507,4 +610,83 @@ async def get_user_assessment_summary(
         raise HTTPException(
             status_code=500, 
             detail=f"Error obteniendo resumen de evaluaciones: {str(e)}"
-        ) 
+        )
+
+@router.post("/validate-depression-esp32")
+async def validate_depression_with_esp32(
+    request: ESP32ValidationRequest,
+    current_user: Registro = Depends(get_current_active_user)
+):
+    """
+    Envía datos de depresión a la ESP32 para validación con sensores físicos usando MQTT.
+    
+    Args:
+        request: Datos de depresión a validar
+        current_user: Usuario autenticado
+    
+    Returns:
+        Respuesta de la ESP32 con validación
+    """
+    try:
+        # Conectar a MQTT si no está conectado
+        if not mqtt_client.connected:
+            if not mqtt_client.connect():
+                return {
+                    "success": False,
+                    "message": "No se pudo conectar al broker MQTT. Verifica la conexión de red.",
+                    "esp32_response": None
+                }
+        
+        # Preparar datos para enviar a la ESP32
+        esp32_data = {
+            "probability": request.probability,
+            "level": request.level,
+            "confidence": request.confidence,
+            "type": request.type,
+            "user_id": current_user.id,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        # Publicar mensaje de inicio en MQTT
+        start_message = {
+            "level": request.level,
+            "probability": request.probability,
+            "confidence": request.confidence,
+            "type": request.type,
+            "user_id": current_user.id,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        # Publicar en el topic de inicio
+        if mqtt_client.publish("wokwi/depresion/start", json.dumps(start_message)):
+            print(f"Mensaje publicado en MQTT: {start_message}")
+            
+            # Esperar respuesta del sensor (máximo 30 segundos)
+            sensor_response = mqtt_client.wait_for_response(timeout=30)
+            
+            if sensor_response:
+                return {
+                    "success": True,
+                    "message": "Validación con sensores físicos completada exitosamente",
+                    "esp32_response": sensor_response
+                }
+            else:
+                return {
+                    "success": False,
+                    "message": "No se recibió respuesta del sensor en el tiempo esperado.",
+                    "esp32_response": None
+                }
+        else:
+            return {
+                "success": False,
+                "message": "No se pudo publicar el mensaje en MQTT. Verifica la conexión al broker.",
+                "esp32_response": None
+            }
+                
+    except Exception as e:
+        print(f"Error en validación MQTT: {e}")
+        return {
+            "success": False,
+            "message": f"Error al validar con sensores físicos: {str(e)}",
+            "esp32_response": None
+        } 

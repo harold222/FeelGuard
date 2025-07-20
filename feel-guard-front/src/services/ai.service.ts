@@ -5,7 +5,7 @@ import type {
   ChatMessage 
 } from '../types/ai';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE = 'https://feel-guard-backend-v1-0-0.onrender.com';
 
 export const aiService = {
   async processText(text: string, sessionId?: string): Promise<AIResponse> {
@@ -112,6 +112,30 @@ export const aiService = {
     if (!response.ok) {
       throw new Error('No se pudo obtener el historial de chat');
     }
+    return response.json();
+  },
+
+  // Método para validar depresión con ESP32
+  async validateDepressionWithESP32(depressionData: {
+    probability: number;
+    level: string;
+    confidence: number;
+    type: 'text' | 'voice' | 'image';
+  }): Promise<{ success: boolean; message: string; esp32_response?: unknown }> {
+    const token = localStorage.getItem('auth_token');
+    const response = await fetch(`${API_BASE}/api/ai/validate-depression-esp32`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(depressionData),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Error al validar con ESP32');
+    }
+    
     return response.json();
   },
 }; 

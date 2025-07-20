@@ -30,6 +30,16 @@ Este documento explica cómo ejecutar Feel Guard usando Docker.
    docker-rebuild.bat
    ```
 
+4. **Subir a Docker Hub:**
+   ```bash
+   docker-push.bat
+   ```
+
+5. **Usar desde Docker Hub:**
+   ```bash
+   docker-pull.bat
+   ```
+
 ### Opción 2: Comandos Manuales
 
 1. **Construir e iniciar servicios:**
@@ -56,13 +66,63 @@ Una vez iniciados, puedes acceder a:
 - **API Documentation:** http://localhost:8000/docs
 - **Base de datos (PostgreSQL):** localhost:5432
 
+## 🐳 Docker Hub
+
+### Imágenes Disponibles
+
+Las imágenes están disponibles en Docker Hub bajo el usuario `2harold2`:
+
+- **Backend:** `2harold2/feel-guard-backend:v1.0.0`
+- **Frontend:** `2harold2/feel-guard-frontend:v1.0.0`
+
+### Subir a Docker Hub
+
+1. **Construir y subir:**
+   ```bash
+   docker-push.bat
+   ```
+
+2. **Manual:**
+   ```bash
+   # Construir
+   docker-compose build
+   
+   # Login a Docker Hub
+   docker login
+   
+   # Subir imágenes
+   docker push 2harold2/feel-guard-backend:v1.0.0
+   docker push 2harold2/feel-guard-frontend:v1.0.0
+   ```
+
+### Usar desde Docker Hub
+
+1. **Descargar y ejecutar:**
+   ```bash
+   docker-pull.bat
+   ```
+
+2. **Manual:**
+   ```bash
+   # Descargar imágenes
+   docker pull 2harold2/feel-guard-backend:v1.0.0
+   docker pull 2harold2/feel-guard-frontend:v1.0.0
+   
+   # Ejecutar con docker-compose.prod.yml
+   docker-compose -f docker-compose.prod.yml up -d
+   ```
+
 ## 📁 Estructura de Archivos Docker
 
 ```
 diplomado/
-├── docker-compose.yml          # Orquestación de servicios
+├── docker-compose.yml          # Orquestación de servicios (desarrollo)
+├── docker-compose.prod.yml     # Orquestación de servicios (producción)
 ├── docker-start.bat           # Script para iniciar
 ├── docker-stop.bat            # Script para detener
+├── docker-rebuild.bat         # Script para reconstruir
+├── docker-push.bat            # Script para subir a Docker Hub
+├── docker-pull.bat            # Script para usar desde Docker Hub
 ├── feel-guard-back/
 │   ├── Dockerfile             # Imagen del backend
 │   └── .dockerignore          # Archivos a ignorar

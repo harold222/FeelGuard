@@ -1,7 +1,7 @@
 // Configuración del API
 export const API_CONFIG = {
   // URL base del API - Backend FastAPI
-  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
+  BASE_URL: 'https://feel-guard-backend-v1-0-0.onrender.com',
   
   // Timeout para las peticiones (en milisegundos)
   TIMEOUT: 10000,
