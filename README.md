@@ -1,4 +1,4 @@
-# Feel Guard - Sistema de Monitoreo de Temperatura
+# Feel Guard - Sistema Multimodal de Monitoreo de Depresión 
 
 Sistema completo para el monitoreo de temperatura y bienestar personal, desarrollado con React (Frontend) y FastAPI (Backend).
 
