@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  # Backend - FastAPI
+  backend:
+    build:
+      context: ./feel-guard-back
+      dockerfile: Dockerfile
+    container_name: feel-guard-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - DATABASE_URL=postgresql://postgres.pksyqsewzhyjxhntojow:Roci12345.@aws-0-us-east-2.pooler.supabase.com:6543/postgres
+      - SECRET_KEY=feelGuardProyectoTest
+      - OPENAI_API_KEY=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
+    volumes:
+      - ./feel-guard-back/uploads:/app/uploads
+    depends_on:
+      - postgres
+    networks:
+      - feel-guard-network
+    restart: unless-stopped
+
+  # Frontend - React
+  frontend:
+    build:
+      context: ./feel-guard-front
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:8000
+    container_name: feel-guard-frontend
+    ports:
+      - "80:80"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000
+    depends_on:
+      - backend
+    networks:
+      - feel-guard-network
+    restart: unless-stopped
+
+  # Base de datos PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    container_name: feel-guard-postgres
+    environment:
+      - POSTGRES_DB=feelguard
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - feel-guard-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  feel-guard-network:
+    driver: bridge 
