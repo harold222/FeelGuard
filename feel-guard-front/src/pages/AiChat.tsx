@@ -118,7 +118,7 @@ const AiChat: React.FC = () => {
             <button
               onClick={() => {
                 const depressionData = {
-                  probability: Math.round(assessment.depression_assessment?.probability_depression || 0 * 100),
+                  probability:  (assessment.depression_assessment!.probability_depression * 100).toFixed(1),
                   level: assessment.depression_assessment?.level || 'Bajo',
                   confidence: assessment.depression_assessment?.score || 0,
                   type: 'text' as const
@@ -168,7 +168,12 @@ const AiChat: React.FC = () => {
             <strong>{validationResults[msgId]?.success ? '✅' : '❌'} Sensores Físicos:</strong> {validationResults[msgId]?.message}
             {validationResults[msgId]?.success && (
               <div style={{marginTop: 4, fontSize: '0.8rem', color: '#666'}}>
-                <strong>Datos del sensor:</strong> {JSON.stringify(validationResults[msgId]?.esp32_response || {}, null, 2)}
+                <strong>Datos del sensor: </strong> 
+                  {
+                    (validationResults[msgId]?.esp32_response as any)["text"] === "true" ?
+                    "Depresión confirmada a través de sensor físico" : 
+                    "Depresión no confirmada a través de sensor físico"
+                  }
               </div>
             )}
           </div>
@@ -222,7 +227,7 @@ const AiChat: React.FC = () => {
               <button
                 onClick={() => {
                   const depressionData = {
-                    probability: Math.round(classification.probability[1] * 100), // Probabilidad de depresión
+                    probability: (classification.probability[1] * 100).toFixed(1), // Probabilidad de depresión
                     level: level,
                     confidence: classification.confidence,
                     type: 'image' as const
@@ -269,7 +274,17 @@ const AiChat: React.FC = () => {
               border: `1px solid ${validationResults[msgId]?.success ? '#4caf50' : '#f44336'}`,
               fontSize: '0.9rem'
             }}>
-              <strong>{validationResults[msgId]?.success ? '✅' : '❌'} ESP32:</strong> {validationResults[msgId]?.message}
+              <strong>{validationResults[msgId]?.success ? '✅' : '❌'} Sensores Físicos:</strong> {validationResults[msgId]?.message}
+              {validationResults[msgId]?.success && (
+                <div style={{marginTop: 4, fontSize: '0.8rem', color: '#666'}}>
+                  <strong>Datos del sensor: </strong> 
+                  {
+                    (validationResults[msgId]?.esp32_response as any)["text"] === "true" ?
+                    "Depresión confirmada a través de sensor físico" : 
+                    "Depresión no confirmada a través de sensor físico"
+                  }
+                </div>
+              )}
             </div>
           )}
           
@@ -456,7 +471,7 @@ const AiChat: React.FC = () => {
 
   // Validar depresión con ESP32
   const handleValidateDepression = async (msgId: number, depressionData: {
-    probability: number;
+    probability: string;
     level: string;
     confidence: number;
     type: 'text' | 'voice' | 'image';

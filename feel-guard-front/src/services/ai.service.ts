@@ -117,7 +117,7 @@ export const aiService = {
 
   // Método para validar depresión con ESP32
   async validateDepressionWithESP32(depressionData: {
-    probability: number;
+    probability: string;
     level: string;
     confidence: number;
     type: 'text' | 'voice' | 'image';

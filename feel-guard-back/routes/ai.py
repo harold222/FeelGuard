@@ -61,7 +61,7 @@ class UserAssessmentSummary(BaseModel):
     recommendations: List[str]
 
 class ESP32ValidationRequest(BaseModel):
-    probability: float
+    probability: str
     level: str
     confidence: float
     type: str
@@ -83,7 +83,7 @@ class MQTTClient:
         self.message_received = threading.Event()
         
     def on_connect(self, client, userdata, flags, rc):
-        print(f"Conectado a MQTT con código: {rc}")
+        print(f"Conectado a MQTT código: {rc}")
         self.connected = True
         # Suscribirse al topic para recibir datos del sensor
         client.subscribe("wokwi/depresion/bpm")
@@ -423,7 +423,6 @@ async def get_user_assessment_summary(
     Args:
         current_user: Usuario autenticado
         days: Número de días hacia atrás para analizar (por defecto 30)
-    
     Returns:
         Resumen de evaluaciones con estadísticas y recomendaciones
     """
@@ -637,32 +636,22 @@ async def validate_depression_with_esp32(
                     "esp32_response": None
                 }
         
-        # Preparar datos para enviar a la ESP32
-        esp32_data = {
-            "probability": request.probability,
-            "level": request.level,
-            "confidence": request.confidence,
-            "type": request.type,
-            "user_id": current_user.id,
-            "timestamp": datetime.now().isoformat()
-        }
-        
         # Publicar mensaje de inicio en MQTT
-        start_message = {
-            "level": request.level,
-            "probability": request.probability,
-            "confidence": request.confidence,
-            "type": request.type,
-            "user_id": current_user.id,
-            "timestamp": datetime.now().isoformat()
-        }
+        # start_message = {
+        #     "probability": request.probability,
+        #     "level": request.level,
+        #     "confidence": request.confidence,
+        #     "type": request.type,
+        #     "user_id": current_user.id,
+        #     "timestamp": datetime.now().isoformat()
+        # }
         
         # Publicar en el topic de inicio
-        if mqtt_client.publish("wokwi/depresion/start", json.dumps(start_message)):
-            print(f"Mensaje publicado en MQTT: {start_message}")
+        #if mqtt_client.publish("wokwi/depresion/start", json.dumps(start_message)):
+        if mqtt_client.publish("wokwi/depresion/start", request.probability):
+            print(f"Mensaje publicado en MQTT: {request.probability}")
             
-            # Esperar respuesta del sensor (máximo 30 segundos)
-            sensor_response = mqtt_client.wait_for_response(timeout=30)
+            sensor_response = mqtt_client.wait_for_response(timeout=60)
             
             if sensor_response:
                 return {
